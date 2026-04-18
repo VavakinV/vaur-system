@@ -16,7 +16,9 @@ dependencies = [
 
 [tool.poetry]
 packages = [
-    { include = "vaur", from = "vaur" }
+    { include = "vaur" },
+    { include = "users" },
+    { include = "works" }
 ]
 
 

@@ -10,14 +10,15 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml poetry.lock ./
+COPY manage.py ./manage.py
 COPY vaur ./vaur
+COPY users ./users
+COPY works ./works
 COPY entrypoint.sh ./entrypoint.sh
 
 RUN pip install --upgrade pip \
     && pip install . \
     && chmod +x /app/entrypoint.sh
-
-WORKDIR /app/vaur
 
 EXPOSE 8000
 
