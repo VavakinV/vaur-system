@@ -93,7 +93,7 @@ class Teacher(models.Model):
         verbose_name='Пользователь',
     )
     department = models.ForeignKey(Department, on_delete=models.CASCADE, verbose_name='Кафедра')
-    student_limit = models.PositiveIntegerField(null=True, verbose_name='Максимум студентов')
+    student_limit = models.PositiveIntegerField(null=True, blank=True, verbose_name='Максимум студентов')
     is_norm_controller = models.BooleanField(default=False, verbose_name='Является нормоконтролером')
 
     class Meta:
