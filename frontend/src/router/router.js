@@ -1,0 +1,74 @@
+import {createRouter, createWebHistory} from 'vue-router'
+import store from '@/store'
+
+import Login from '@/views/LoginView'
+import Works from '@/views/WorksView'
+import Forbidden from '@/views/ForbiddenView'
+
+const routes = [
+    {
+        path: "/",
+        redirect: "/works",
+    },
+    {
+        path: '/login',
+        name: 'login',
+        component: Login,
+        meta: {
+            showNavbar: false
+        }
+    },
+    {
+        path: '/works',
+        name: 'works',
+        component: Works,
+        meta: {
+            requiresAuth: true,
+            roles: ["admin", "student", "teacher"]
+        }
+    },
+    {
+        path: '/forbidden',
+        name: 'forbidden',
+        component: Forbidden,
+    }
+]
+
+const router = createRouter({
+    routes,
+    history: createWebHistory()
+})
+
+router.beforeEach((to, from, next) => {
+    // to and from are both route objects. must call `next`.
+    const isAuthenticated = store.getters["auth/isAuthenticated"]
+    const role = store.getters["auth/role"]
+
+    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+    const isPublic = to.matched.some((record) => record.meta.public)
+
+    if (requiresAuth && !isAuthenticated) {
+        next({
+            name: "login",
+            query: {
+                redirect: to.fullPath
+            }
+        })
+        return
+    }
+
+    if (to.name === "login" && isAuthenticated) {
+        next(to.query.redirect || "/works")
+        return
+    }
+
+    const allowedRoles = to.meta.roles
+    if (allowedRoles && allowedRoles.length && !allowedRoles.includes(role)) {
+        next({name: "forbidden"})
+        return
+    }
+
+    next()
+})
+
+export default router
