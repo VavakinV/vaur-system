@@ -2,8 +2,17 @@ from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.forms import ReadOnlyPasswordHashField
+from django.contrib.admin.sites import NotRegistered
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken, OutstandingToken
 
 from .models import Department, Group, Student, Teacher, User
+
+
+for token_model in (OutstandingToken, BlacklistedToken):
+    try:
+        admin.site.unregister(token_model)
+    except NotRegistered:
+        pass
 
 
 class UserCreationForm(forms.ModelForm):

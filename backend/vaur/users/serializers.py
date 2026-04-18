@@ -1,6 +1,9 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, password_validation
+from django.db import transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
+
+from .models import Group, Student
 
 
 User = get_user_model()
@@ -8,6 +11,11 @@ User = get_user_model()
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
+    group_number = serializers.PrimaryKeyRelatedField(
+        queryset=Group.objects.all(),
+        write_only=True,
+        required=True,
+    )
 
     class Meta:
         model = User
@@ -19,20 +27,59 @@ class RegisterSerializer(serializers.ModelSerializer):
             'first_name',
             'middle_name',
             'contacts',
-            'role',
+            'group_number',
         )
 
+    def validate_password(self, value):
+        password_validation.validate_password(value)
+        return value
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        group = attrs.get('group_number')
+        if group is None:
+            raise serializers.ValidationError({'group_number': 'This field is required.'})
+
+        return attrs
+
+    @transaction.atomic
     def create(self, validated_data):
         password = validated_data.pop('password')
-        user = User(**validated_data)
+        group = validated_data.pop('group_number')
+
+        user = User(role=User.Role.STUDENT, **validated_data)
         user.set_password(password)
         user.save()
+
+        Student.objects.create(user=user, group_number=group)
+
         return user
 
 
 class AuthTokensSerializer(serializers.Serializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
+
+
+class LoginSerializer(serializers.Serializer):
+    username = serializers.CharField()
+    password = serializers.CharField()
+
+
+class RefreshTokenSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+
+class AccessTokenSerializer(serializers.Serializer):
+    access = serializers.CharField()
+
+
+class LogoutSerializer(serializers.Serializer):
+    refresh = serializers.CharField()
+
+
+class MessageSerializer(serializers.Serializer):
+    detail = serializers.CharField()
 
 
 class RegisterResponseSerializer(serializers.ModelSerializer):
