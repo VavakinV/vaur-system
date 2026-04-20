@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'storages',
     'rest_framework',
     'drf_spectacular',
     'rest_framework_simplejwt.token_blacklist',
@@ -129,10 +130,42 @@ USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = 'static/'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 AUTH_USER_MODEL = 'users.User'
+
+USE_S3_STORAGE = env_bool('USE_S3_STORAGE', default=False)
+
+if USE_S3_STORAGE:
+    AWS_ACCESS_KEY_ID = get_env('MINIO_ROOT_USER')
+    AWS_SECRET_ACCESS_KEY = get_env('MINIO_ROOT_PASSWORD')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'vaur-documents')
+    AWS_S3_ENDPOINT_URL = os.getenv('MINIO_ENDPOINT_URL', 'http://minio:9000')
+    AWS_S3_REGION_NAME = os.getenv('MINIO_REGION', 'us-east-1')
+    AWS_S3_ADDRESSING_STYLE = 'path'
+    AWS_QUERYSTRING_AUTH = False
+    AWS_DEFAULT_ACL = None
+    AWS_S3_FILE_OVERWRITE = False
+    STORAGES = {
+        'default': {
+            'BACKEND': 'storages.backends.s3.S3Storage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
+else:
+    STORAGES = {
+        'default': {
+            'BACKEND': 'django.core.files.storage.FileSystemStorage',
+        },
+        'staticfiles': {
+            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+        },
+    }
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
