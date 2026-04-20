@@ -1,5 +1,6 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -93,8 +94,12 @@ class LogoutView(APIView):
 
         try:
             token = RefreshToken(serializer.validated_data['refresh'])
+            if str(token['user_id']) != str(request.user.id):
+                raise PermissionDenied('You can only revoke your own refresh token.')
             token.blacklist()
-        except TokenError:
+        except PermissionDenied:
+            raise
+        except (KeyError, TokenError):
             return Response(
                 {'detail': 'Invalid or expired refresh token.'},
                 status=status.HTTP_400_BAD_REQUEST,

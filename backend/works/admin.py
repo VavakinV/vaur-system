@@ -1,12 +1,12 @@
 from django.contrib import admin
 
-from .models import Work, WorkCorrection, WorkType
+from works.models import Work, WorkCorrection, WorkType
 
 
 @admin.register(WorkType)
 class WorkTypeAdmin(admin.ModelAdmin):
-    list_display = ('name', 'code')
-    search_fields = ('name', 'code')
+    list_display = ('name',)
+    search_fields = ('name',)
 
 
 @admin.register(Work)
@@ -21,7 +21,6 @@ class WorkAdmin(admin.ModelAdmin):
         'supervisor__user__first_name',
         'department__name',
         'work_type__name',
-        'work_type__code',
     )
 
 

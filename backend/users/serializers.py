@@ -3,7 +3,7 @@ from django.db import transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Group, Student
+from users.models import Group, Student
 
 
 User = get_user_model()

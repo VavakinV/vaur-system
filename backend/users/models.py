@@ -1,6 +1,20 @@
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.core.exceptions import ValidationError
 from django.db import models
+
+
+class CustomUserManager(UserManager):
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('role', User.Role.TEACHER)
+
+        if extra_fields.get('is_staff') is not True:
+            raise ValueError('Superuser must have is_staff=True.')
+        if extra_fields.get('is_superuser') is not True:
+            raise ValueError('Superuser must have is_superuser=True.')
+
+        return super().create_superuser(username, email=email, password=password, **extra_fields)
 
 
 class User(AbstractUser):
@@ -15,6 +29,9 @@ class User(AbstractUser):
     contacts = models.CharField(max_length=100, blank=True, null=True, verbose_name='Контакты')
     role = models.CharField(max_length=20, choices=Role.choices, verbose_name='Роль')
     dt_created = models.DateTimeField(auto_now_add=True)
+
+    REQUIRED_FIELDS = ['email', 'role']
+    objects = CustomUserManager()
 
     class Meta:
         verbose_name = 'Пользователь'
