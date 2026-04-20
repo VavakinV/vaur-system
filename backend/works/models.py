@@ -7,7 +7,6 @@ from users.models import Department, Student, Teacher
 
 class WorkType(models.Model):
     name = models.CharField(max_length=100, unique=True, verbose_name='Название типа работы')
-    code = models.CharField(max_length=50, unique=True, verbose_name='Код типа работы')
 
     class Meta:
         verbose_name = 'Тип работы'
