@@ -11,10 +11,11 @@ class WorkTypeAdmin(admin.ModelAdmin):
 
 @admin.register(Work)
 class WorkAdmin(admin.ModelAdmin):
-    list_display = ('topic', 'work_type', 'student', 'supervisor', 'department', 'norm_control_status')
+    list_display = ('topic', 'work_type', 'student', 'supervisor', 'department', 'norm_control_status', 'document_original_name')
     list_filter = ('work_type', 'norm_control_status', 'department')
     search_fields = (
         'topic',
+        'document_original_name',
         'student__user__last_name',
         'student__user__first_name',
         'supervisor__user__last_name',

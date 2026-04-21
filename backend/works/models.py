@@ -1,8 +1,17 @@
+from pathlib import Path
+from uuid import uuid4
+
 from django.core.exceptions import ValidationError
+from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils import timezone
 
 from users.models import Department, Student, Teacher
+
+
+def work_document_upload_to(instance, filename):
+    suffix = Path(filename).suffix.lower()
+    return f'works/{instance.pk or "new"}/{uuid4().hex}{suffix}'
 
 
 class WorkType(models.Model):
@@ -48,6 +57,18 @@ class Work(models.Model):
         verbose_name='Тип работы',
     )
     topic = models.CharField(max_length=255, verbose_name='Тема работы')
+    document = models.FileField(
+        upload_to=work_document_upload_to,
+        validators=[FileExtensionValidator(['docx'])],
+        null=True,
+        blank=True,
+        verbose_name='Файл работы',
+    )
+    document_original_name = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Оригинальное имя файла',
+    )
     norm_control_status = models.CharField(
         max_length=20,
         choices=NormControlStatus.choices,
@@ -58,6 +79,20 @@ class Work(models.Model):
     class Meta:
         verbose_name = 'Работа'
         verbose_name_plural = 'Работы'
+
+    def clean(self):
+        super().clean()
+        if self.document and not self.document.name.lower().endswith('.docx'):
+            raise ValidationError({'document': 'Можно загружать только файлы .docx.'})
+
+    def save(self, *args, **kwargs):
+        if self.document and not self.document._committed:
+            self.document_original_name = Path(self.document.name).name
+        elif not self.document:
+            self.document_original_name = ''
+
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.topic
