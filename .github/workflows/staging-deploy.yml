@@ -36,7 +36,7 @@ jobs:
           EOF
 
       - name: Validate docker compose config
-        run: docker-compose --env-file .deploy.env -f docker-compose.staging.yml config
+        run: docker compose --env-file .deploy.env -f docker-compose.staging.yml config
 
   build:
     runs-on: ubuntu-latest
