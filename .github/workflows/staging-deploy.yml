@@ -159,7 +159,13 @@ jobs:
           set -a
           . ./.deploy.env
           set +a
-          docker-compose pull
-          docker-compose up -d --remove-orphans
-          docker-compose ps
+          if docker compose version >/dev/null 2>&1; then
+            COMPOSE_CMD="docker compose"
+          else
+            COMPOSE_CMD="docker-compose"
+          fi
+          \$COMPOSE_CMD down --remove-orphans || true
+          \$COMPOSE_CMD pull
+          \$COMPOSE_CMD up -d
+          \$COMPOSE_CMD ps
           EOF
