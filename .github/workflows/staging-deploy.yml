@@ -155,7 +155,10 @@ jobs:
           set -e
           echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
           cd "${{ secrets.STAGING_APP_DIR }}"
-          docker compose --env-file .deploy.env pull
-          docker compose --env-file .deploy.env up -d --remove-orphans
+          set -a
+          . ./.deploy.env
+          set +a
+          docker compose pull
+          docker compose up -d --remove-orphans
           docker compose ps
           EOF
