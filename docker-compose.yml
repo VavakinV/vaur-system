@@ -1,12 +1,12 @@
 services:
   web:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     command: python manage.py runserver 0.0.0.0:8000
     working_dir: /app
     env_file:
-      - .env
+      - ./backend/.env
     environment:
       USE_S3_STORAGE: "True"
       MINIO_ENDPOINT_URL: http://minio:9000
@@ -15,7 +15,7 @@ services:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
-      - .:/app
+      - ./backend:/app
     ports:
       - "8000:8000"
     depends_on:
@@ -24,11 +24,21 @@ services:
       createbucket:
         condition: service_completed_successfully
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - web
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
     env_file:
-      - .env
+      - ./backend/.env
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
