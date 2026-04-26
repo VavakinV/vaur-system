@@ -145,6 +145,7 @@ jobs:
           cat > "${{ secrets.STAGING_APP_DIR }}/.deploy.env" <<EOCFG
           STAGING_WEB_IMAGE=${{ needs.build.outputs.web_image }}
           STAGING_FRONTEND_IMAGE=${{ needs.build.outputs.frontend_image }}
+          STAGING_FRONTEND_PORT=${{ secrets.STAGING_FRONTEND_PORT }}
           EOCFG
           EOF
 
