@@ -14,6 +14,7 @@ services:
       MINIO_REGION: us-east-1
     volumes:
       - ./backend:/app
+      - static_data:/app/staticfiles
     ports:
       - "8000:8000"
     depends_on:
@@ -27,6 +28,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     restart: unless-stopped
+    volumes:
+      - static_data:/usr/share/nginx/django-static:ro
     ports:
       - "8080:80"
     depends_on:
@@ -73,3 +76,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  static_data:

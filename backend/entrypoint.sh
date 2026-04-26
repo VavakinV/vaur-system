@@ -26,5 +26,6 @@ else:
     raise SystemExit('PostgreSQL is unavailable after 30 seconds')"
 
 python manage.py migrate
+python manage.py collectstatic --noinput
 
 exec "$@"
