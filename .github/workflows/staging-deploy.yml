@@ -1,0 +1,161 @@
+name: Staging Deploy
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+concurrency:
+  group: staging-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: ${{ github.repository_owner }}
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Prepare backend env for compose validation
+        shell: bash
+        run: |
+          cp backend/.env.example backend/.env
+          cat <<'EOF' > .deploy.env
+          STAGING_WEB_IMAGE=ghcr.io/example/vaur-system-web:staging
+          STAGING_FRONTEND_IMAGE=ghcr.io/example/vaur-system-frontend:staging
+          EOF
+
+      - name: Validate docker compose config
+        run: docker compose --env-file .deploy.env -f docker-compose.staging.yml config
+
+  build:
+    runs-on: ubuntu-latest
+    needs: validate
+
+    outputs:
+      web_image: ${{ steps.meta.outputs.web_image }}
+      frontend_image: ${{ steps.meta.outputs.frontend_image }}
+      web_image_sha: ${{ steps.meta.outputs.web_image_sha }}
+      frontend_image_sha: ${{ steps.meta.outputs.frontend_image_sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Normalize image names
+        id: meta
+        shell: bash
+        run: |
+          owner="$(echo '${{ env.IMAGE_NAMESPACE }}' | tr '[:upper:]' '[:lower:]')"
+          echo "web_image=${{ env.REGISTRY }}/${owner}/vaur-system-web:staging" >> "$GITHUB_OUTPUT"
+          echo "web_image_sha=${{ env.REGISTRY }}/${owner}/vaur-system-web:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=${{ env.REGISTRY }}/${owner}/vaur-system-frontend:staging" >> "$GITHUB_OUTPUT"
+          echo "frontend_image_sha=${{ env.REGISTRY }}/${owner}/vaur-system-frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.web_image }}
+            ${{ steps.meta.outputs.web_image_sha }}
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.frontend_image }}
+            ${{ steps.meta.outputs.frontend_image_sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: staging
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH key
+        shell: bash
+        run: |
+          install -m 700 -d ~/.ssh
+          cat <<'EOF' > ~/.ssh/id_ed25519
+          ${{ secrets.STAGING_SSH_KEY }}
+          EOF
+          chmod 600 ~/.ssh/id_ed25519
+
+      - name: Add server to known_hosts
+        shell: bash
+        run: |
+          ssh-keyscan -p 22 "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Ensure target directories exist
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p 22 "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
+            "mkdir -p '${{ secrets.STAGING_APP_DIR }}/backend'"
+
+      - name: Upload staging compose file
+        shell: bash
+        run: |
+          rsync -az \
+            -e "ssh -i ~/.ssh/id_ed25519 -p 22" \
+            ./docker-compose.staging.yml "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}:${{ secrets.STAGING_APP_DIR }}/docker-compose.yml"
+
+      - name: Upload backend env
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p 22 "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" <<'EOF'
+          cat > "${{ secrets.STAGING_APP_DIR }}/backend/.env" <<'EOCFG'
+          ${{ secrets.STAGING_BACKEND_ENV }}
+          EOCFG
+          EOF
+
+      - name: Upload deploy env
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p 22 "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" <<EOF
+          cat > "${{ secrets.STAGING_APP_DIR }}/.deploy.env" <<EOCFG
+          STAGING_WEB_IMAGE=${{ needs.build.outputs.web_image }}
+          STAGING_FRONTEND_IMAGE=${{ needs.build.outputs.frontend_image }}
+          EOCFG
+          EOF
+
+      - name: Deploy on staging
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/id_ed25519 -p 22 "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" <<EOF
+          set -e
+          echo "${{ secrets.GHCR_READ_TOKEN }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
+          cd "${{ secrets.STAGING_APP_DIR }}"
+          docker compose --env-file .deploy.env pull
+          docker compose --env-file .deploy.env up -d --remove-orphans
+          docker compose ps
+          EOF

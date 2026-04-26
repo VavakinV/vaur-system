@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -17,8 +17,27 @@ COPY works ./works
 COPY entrypoint.sh ./entrypoint.sh
 
 RUN pip install --upgrade pip \
-    && pip install . \
+    && pip install . --prefix=/install \
     && chmod +x /app/entrypoint.sh
+
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /install /usr/local
+COPY manage.py ./manage.py
+COPY vaur ./vaur
+COPY users ./users
+COPY works ./works
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 EXPOSE 8000
 
