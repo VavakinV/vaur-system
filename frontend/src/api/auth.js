@@ -106,5 +106,14 @@ export default {
 
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
+    },
+
+    async getUserData(accessToken) {
+        const response = await apiClient.get('/auth/me/', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        return response.data;
     }
 }
