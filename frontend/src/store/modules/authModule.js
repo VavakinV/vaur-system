@@ -3,31 +3,36 @@ import authApi from "@/api/auth"
 export const authModule = {
     namespaced: true,
     state: () => ({
+        accessToken: localStorage.getItem('access_token') || null,
+        refreshToken: localStorage.getItem('refresh_token') || null,
         user: JSON.parse(localStorage.getItem('user')) || null,
-        token: localStorage.getItem('token') || null,
     }),
 
     getters: {
-        isAuthenticated: (state) => Boolean(state.user && state.token),
+        isAuthenticated: (state) => Boolean(state.accessToken),
         user: (state) => state.user,
         role: (state) => state.user?.role || null
     },
 
     mutations: {
-        SET_AUTH(state, {user, token}){
-            state.user = user
-            state.token = token
+        SET_AUTH(state, { access, refresh, user }) {
+            state.accessToken = access;
+            state.refreshToken = refresh;
+            state.user = user;
 
-            localStorage.setItem("user", JSON.stringify(user))
-            localStorage.setItem("token", token)
+            localStorage.setItem("access_token", access);
+            localStorage.setItem("refresh_token", refresh);
+            localStorage.setItem("user", JSON.stringify(user));
         },
 
         CLEAR_AUTH(state) {
-            state.user = null
-            state.token = null
+            state.accessToken = null;
+            state.refreshToken = null;
+            state.user = null;
 
-            localStorage.removeItem("user")
-            localStorage.removeItem("token")
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("refresh_token");
+            localStorage.removeItem("user");
         }
     },
 
