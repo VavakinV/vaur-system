@@ -78,13 +78,16 @@ class LoginSerializer(serializers.Serializer):
 
 class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
     username_field = User.USERNAME_FIELD
-    username = serializers.CharField(required=False)
     email = serializers.EmailField(required=False)
 
     default_error_messages = {
         **TokenObtainPairSerializer.default_error_messages,
         'missing_identifier': 'Provide either username or email.',
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields[self.username_field].required = False
 
     def validate(self, attrs):
         identifier = attrs.get(self.username_field) or attrs.get('email')
