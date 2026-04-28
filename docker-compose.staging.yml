@@ -1,8 +1,6 @@
 services:
   web:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ${STAGING_WEB_IMAGE}
     command: python manage.py runserver 0.0.0.0:8000
     working_dir: /app
     env_file:
@@ -12,28 +10,24 @@ services:
       MINIO_ENDPOINT_URL: http://minio:9000
       MINIO_BUCKET_NAME: vaur-documents
       MINIO_REGION: us-east-1
-    volumes:
-      - ./backend:/app
-      - static_data:/app/staticfiles
-    ports:
-      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
       createbucket:
         condition: service_completed_successfully
+    volumes:
+      - static_data:/app/staticfiles
+    restart: unless-stopped
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    restart: unless-stopped
+    image: ${STAGING_FRONTEND_IMAGE}
+    depends_on:
+      - web
     volumes:
       - static_data:/usr/share/nginx/django-static:ro
     ports:
-      - "8080:80"
-    depends_on:
-      - web
+      - "${STAGING_FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
 
   db:
     image: postgres:16-alpine
@@ -51,12 +45,9 @@ services:
   minio:
     image: minio/minio:latest
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    command: server /data
     env_file:
       - ./backend/.env
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     volumes:
       - minio_data:/data
 

@@ -241,6 +241,17 @@ class UsersApiTests(APITestCase):
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
 
+    def test_login_returns_token_pair_for_valid_email_credentials(self):
+        response = self.client.post(
+            self.login_url,
+            {'email': 'student_one@example.com', 'password': 'Pass12345!'},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+
     def test_login_rejects_invalid_credentials(self):
         response = self.client.post(
             self.login_url,

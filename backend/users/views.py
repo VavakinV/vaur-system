@@ -11,6 +11,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .serializers import (
     AccessTokenSerializer,
     AuthTokensSerializer,
+    EmailOrUsernameTokenObtainPairSerializer,
     LoginSerializer,
     LogoutSerializer,
     MeSerializer,
@@ -44,11 +45,12 @@ class RegisterView(APIView):
 
 class LoginView(TokenObtainPairView):
     permission_classes = [AllowAny]
+    serializer_class = EmailOrUsernameTokenObtainPairSerializer
 
     @extend_schema(
         tags=USERS_TAG,
         operation_id='auth_login',
-        description='Authenticate user credentials and return a JWT access/refresh token pair.',
+        description='Authenticate by username or email and return a JWT access/refresh token pair.',
         request=LoginSerializer,
         responses={
             200: AuthTokensSerializer,
