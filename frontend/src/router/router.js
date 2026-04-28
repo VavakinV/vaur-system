@@ -2,6 +2,7 @@ import {createRouter, createWebHistory} from 'vue-router'
 import store from '@/store'
 
 import Login from '@/views/LoginView'
+import Register from '@/views/RegisterView'
 import Works from '@/views/WorksView'
 import Forbidden from '@/views/ForbiddenView'
 
@@ -14,6 +15,14 @@ const routes = [
         path: '/login',
         name: 'login',
         component: Login,
+        meta: {
+            showNavbar: false
+        }
+    },
+    {
+        path: '/register',
+        name: 'register',
+        component: Register,
         meta: {
             showNavbar: false
         }
