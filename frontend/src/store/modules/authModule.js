@@ -1,13 +1,5 @@
 import authApi from "@/api/auth"
 
-const safelyParseJSON = (data) => {
-    try {
-        return (data && data !== "undefined") ? JSON.parse(data) : null;
-    } catch (e) {
-        return null;
-    }
-};
-
 export const authModule = {
     namespaced: true,
     state: () => {
@@ -64,6 +56,37 @@ export const authModule = {
             } catch (error) {
                 commit("CLEAR_AUTH");
                 throw new Error("Ошибка получения профиля");
+            }
+        },
+
+        async register({ commit }, payload) {
+            try {
+                const data = await authApi.register(payload)
+
+                if (data?.access && data?.refresh) {
+                    commit("SET_AUTH", {
+                        access: data.access,
+                        refresh: data.refresh
+                    })
+
+                    try {
+                        const user = await authApi.getUserData(data.access)
+                        commit("SET_USER", user)
+                        return user
+                    } catch (error) {
+                        commit("CLEAR_AUTH")
+                        throw new Error("Ошибка получения профиля после регистрации")
+                    }
+                }
+
+                return data
+            } catch (error) {
+                throw new Error(
+                    error?.response?.data?.detail ||
+                    error?.response?.data?.message ||
+                    error.message ||
+                    "Ошибка регистрации"
+                )
             }
         },
 
