@@ -173,3 +173,21 @@ class WorkCorrection(models.Model):
 
     def __str__(self):
         return f'Правки к "{self.work}" от {self.author}'
+
+
+class WorkRequest(models.Model):
+    class WorkRequestStatus:
+        PENDING = 'pending', 'В ожидании' 
+        REJECTED = 'rejected', 'Отклонено'
+        ACCEPTED = 'accepted', 'Подтверждено'
+
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name='Студент')
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, verbose_name='Преподаватель')
+    type = models.ForeignKey(WorkType, on_delete=models.CASCADE, verbose_name='Тип работы')
+    topic = models.CharField(max_length=150, verbose_name='Тема работы')
+    created_at = models.DateField(auto_now_add=True, verbose_name='Дата создания')
+
+    class Meta:
+        verbose_name = 'Заявка'
+        verbose_name_plural = 'Заявки'
+        ordering = ('-created_at',)
