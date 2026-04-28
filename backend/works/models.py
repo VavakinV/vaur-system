@@ -183,7 +183,8 @@ class WorkRequest(models.Model):
 
     student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name='Студент')
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, verbose_name='Преподаватель')
-    topic = models.CharField(max_length=150, verbose_name="Тема работы")
+    type = models.ForeignKey(WorkType, on_delete=models.CASCADE, verbose_name='Тип работы')
+    topic = models.CharField(max_length=150, verbose_name='Тема работы')
     created_at = models.DateField(auto_now_add=True, verbose_name='Дата создания')
 
     class Meta:
