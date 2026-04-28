@@ -1,36 +1,3 @@
-//  export default {
-//     // ЗАГЛУШКА, ЗАМЕНИТЬ НА AXIOS
-//     async login({email, password}) {
-
-//         if (email === "admin@test.com" && password === "123456"){
-//             return {
-//                 token: "admin-token",
-//                 user: {
-//                     id: 1,
-//                     name: "Admin",
-//                     role: "admin"
-//                 }
-//             }
-//         }
-
-//         if (email === "user@test.com" && password === "123456"){
-//             return {
-//                 token: "user-token",
-//                 user: {
-//                     id: 2,
-//                     name: "User",
-//                     role: "student"
-//                 }
-//             }
-//         }
-
-//         throw new Error("Неверный email/пароль")
-//     }
-// }
-
-
-
-
 import axios from 'axios';
 
 const API_URL = process.env.VUE_APP_API_URL || 'http://127.0.0.1:8000';
@@ -43,6 +10,15 @@ export const apiClient = axios.create({
 });
 
 export default {
+    async getUserData(accessToken) {
+        const response = await apiClient.get('/auth/me/', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`
+            }
+        });
+        return response.data;
+    },
+
     async login({ email, password }) {
         try {
             const response = await apiClient.post('/auth/login/', {
@@ -50,15 +26,7 @@ export default {
                 password: password
             });
 
-            const { access, refresh } = response.data;
-
-            localStorage.setItem('access_token', access);
-            localStorage.setItem('refresh_token', refresh);
-
-            return {
-                access,
-                refresh
-            };
+            return response.data;
 
         } catch (error) {
             if (error.response) {
@@ -107,13 +75,4 @@ export default {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
     },
-
-    async getUserData(accessToken) {
-        const response = await apiClient.get('/auth/me/', {
-            headers: {
-                Authorization: `Bearer ${accessToken}`
-            }
-        });
-        return response.data;
-    }
 }
