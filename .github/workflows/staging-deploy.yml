@@ -88,6 +88,8 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
+          build-args: |
+            VUE_APP_API_URL=${{ secrets.STAGING_VUE_APP_API_URL }}
           tags: |
             ${{ steps.meta.outputs.frontend_image }}
             ${{ steps.meta.outputs.frontend_image_sha }}
