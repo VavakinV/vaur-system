@@ -1,6 +1,7 @@
 import axios from "axios"
+import { getApiBaseUrl } from "./baseUrl"
 
-const API_URL = process.env.VUE_APP_API_URL || "http://127.0.0.1:8000"
+const API_URL = getApiBaseUrl()
 
 export const apiClient = axios.create({
     baseURL: API_URL,
