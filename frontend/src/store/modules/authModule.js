@@ -20,6 +20,7 @@ export const authModule = {
 
     getters: {
         isAuthenticated: (state) => !!state.accessToken,
+        id: (state) => state.user?.id || null,
         role: (state) => state.user?.role || null,
         userName: (state) => state.user ? `${state.user.first_name} ${state.user.last_name}` : 'Гость'
     },

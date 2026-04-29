@@ -5,6 +5,7 @@ import Login from '@/views/LoginView'
 import Register from '@/views/RegisterView'
 import Works from '@/views/WorksView'
 import Forbidden from '@/views/ForbiddenView'
+import Profile from '@/views/ProfileView.vue'
 
 const routes = [
     {
@@ -31,6 +32,16 @@ const routes = [
         path: '/works',
         name: 'works',
         component: Works,
+        meta: {
+            requiresAuth: true,
+            roles: ["admin", "student", "teacher"]
+        }
+    },
+    {
+        path: '/profile/:id',
+        name: 'profile',
+        component: Profile,
+        props: true,
         meta: {
             requiresAuth: true,
             roles: ["admin", "student", "teacher"]
