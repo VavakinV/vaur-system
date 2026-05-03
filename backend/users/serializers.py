@@ -171,3 +171,9 @@ class MeSerializer(serializers.ModelSerializer):
             'is_staff',
             'is_superuser',
         )
+
+
+class GroupSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Group
+        fields = '__all__'

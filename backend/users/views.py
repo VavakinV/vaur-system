@@ -8,7 +8,7 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
-from .serializers import (
+from users.serializers import (
     AccessTokenSerializer,
     AuthTokensSerializer,
     EmailOrUsernameTokenObtainPairSerializer,
@@ -19,10 +19,14 @@ from .serializers import (
     RefreshTokenSerializer,
     RegisterResponseSerializer,
     RegisterSerializer,
+    GroupSerializer,
 )
+
+from users.models import Group
 
 
 USERS_TAG = ['Users']
+GROUPS_TAG = ['Groups']
 
 
 class RegisterView(APIView):
@@ -120,3 +124,20 @@ class MeView(APIView):
     def get(self, request):
         serializer = MeSerializer(request.user)
         return Response(serializer.data)
+
+
+class GroupView(APIView):
+    @extend_schema(
+        tags=GROUPS_TAG,
+        operation_id='groups_get',
+        description='Get groups list',
+        request=GroupSerializer,
+        responses={
+            200: GroupSerializer,
+        },
+    )
+    def get(self, request):
+        groups = Group.objects.all()
+        serializer = GroupSerializer(groups, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+        
