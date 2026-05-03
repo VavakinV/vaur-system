@@ -4,7 +4,8 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
-from users.models import Group, Student
+from users.mixins import FullNameSerializerMixin
+from users.models import Group, Student, Teacher
 
 
 User = get_user_model()
@@ -120,7 +121,7 @@ class MessageSerializer(serializers.Serializer):
     detail = serializers.CharField()
 
 
-class RegisterResponseSerializer(serializers.ModelSerializer):
+class RegisterResponseSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
     access = serializers.CharField()
     refresh = serializers.CharField()
 
@@ -130,6 +131,7 @@ class RegisterResponseSerializer(serializers.ModelSerializer):
             'id',
             'username',
             'email',
+            'full_name',
             'last_name',
             'first_name',
             'middle_name',
@@ -146,6 +148,7 @@ class RegisterResponseSerializer(serializers.ModelSerializer):
             'id': user.id,
             'username': user.username,
             'email': user.email,
+            'full_name': str(user),
             'last_name': user.last_name,
             'first_name': user.first_name,
             'middle_name': user.middle_name,
@@ -156,13 +159,14 @@ class RegisterResponseSerializer(serializers.ModelSerializer):
         }
 
 
-class MeSerializer(serializers.ModelSerializer):
+class MeSerializer(FullNameSerializerMixin, serializers.ModelSerializer):    
     class Meta:
         model = User
         fields = (
             'id',
             'username',
             'email',
+            'full_name',
             'last_name',
             'first_name',
             'middle_name',
@@ -172,6 +176,78 @@ class MeSerializer(serializers.ModelSerializer):
             'is_superuser',
         )
 
+
+class StudentDetailSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
+    group_number = serializers.CharField(
+        source='group.number',
+        read_only=True,
+    )
+    
+    class Meta:
+        model = Student
+        fields = (
+            'email',
+            'full_name',
+            'last_name',
+            'first_name',
+            'middle_name',
+            'contacts',
+            'group_id',
+            'group_number',
+        )
+
+
+class TeacherDetailSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
+    department_name = serializers.CharField(
+        source='department.name',
+        read_only=True,
+    )
+    
+    class Meta:
+        model = Teacher
+        fields = (
+            'email',
+            'full_name',
+            'last_name',
+            'first_name',
+            'middle_name',
+            'contacts',
+            'department_id',
+            'department_name',
+            'is_norm_controller',
+        )
+
+
+class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
+    group_number = serializers.CharField(
+        source='group.number',
+        read_only=True,
+    )
+    
+    class Meta:
+        model = Student
+        fields = (
+            'full_name',
+            'group_id',
+            'group_number',
+        )
+
+
+class TeacherSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
+    department_name = serializers.CharField(
+        source='department.name',
+        read_only=True,
+    )
+    
+    class Meta:
+        model = Teacher
+        fields = (
+            'full_name',
+            'department_id',
+            'department_name',
+            'is_norm_controller',
+        )
+        
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
