@@ -129,15 +129,20 @@ class MeView(APIView):
 class GroupView(APIView):
     @extend_schema(
         tags=GROUPS_TAG,
-        operation_id='groups_get',
-        description='Get groups list',
-        request=GroupSerializer,
+        operation_id="groups_get",
+        description="Get groups list or group by id",
         responses={
             200: GroupSerializer,
         },
     )
-    def get(self, request):
+    def get(self, request, pk=None):
+        if pk:
+            group = Group.objects.get(pk=pk)
+            return group
+        
         groups = Group.objects.all()
         serializer = GroupSerializer(groups, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    
         
