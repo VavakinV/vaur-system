@@ -17,6 +17,7 @@ class Notification(models.Model):
     type = models.ForeignKey(NotificationType, on_delete=models.CASCADE, verbose_name='Тип уведомления (тема)')
     message = models.CharField(max_length=300, verbose_name='Текст уведомления')
     target_object_link = models.CharField(max_length=100, null=True, blank=True, verbose_name='Ссылка на объект уведомления')
+    is_read = models.BooleanField(default=False, verbose_name='Просмотрено')
     dt_created = models.DateTimeField(auto_now_add=True)
 
     class Meta:
