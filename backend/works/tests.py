@@ -208,3 +208,46 @@ class WorkDocumentApiTests(APITestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_student_can_get_short_work_info(self):
+        self.authenticate(self.student_user)
+
+        response = self.client.get(reverse('work-short', args=[self.work.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.work.pk)
+        self.assertEqual(response.data['topic'], self.work.topic)
+        self.assertEqual(response.data['student_full_name'], str(self.student_user))
+        self.assertEqual(response.data['supervisor_full_name'], str(self.supervisor_user))
+        self.assertEqual(response.data['department_name'], self.department.name)
+        self.assertEqual(response.data['work_type_name'], self.work_type.name)
+        self.assertFalse(response.data['has_document'])
+
+    def test_supervisor_can_get_detailed_work_info(self):
+        self.work.document.save('detailed.docx', SimpleUploadedFile('detailed.docx', b'docx data'), save=True)
+        self.work.document_original_name = 'detailed.docx'
+        self.work.save(update_fields=['document_original_name'])
+        self.authenticate(self.supervisor_user)
+
+        response = self.client.get(reverse('work-detail', args=[self.work.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['id'], self.work.pk)
+        self.assertEqual(response.data['student_id'], self.student.pk)
+        self.assertEqual(response.data['supervisor_id'], self.supervisor.pk)
+        self.assertEqual(response.data['department_id'], self.department.pk)
+        self.assertEqual(response.data['work_type_id'], self.work_type.pk)
+        self.assertEqual(response.data['document_original_name'], 'detailed.docx')
+        self.assertTrue(response.data['download_url'].endswith(reverse('work-document', args=[self.work.pk])))
+
+    def test_other_student_cannot_get_short_work_info(self):
+        self.authenticate(self.other_student_user)
+
+        response = self.client.get(reverse('work-short', args=[self.work.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_work_detail_requires_authentication(self):
+        response = self.client.get(reverse('work-detail', args=[self.work.pk]))
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
