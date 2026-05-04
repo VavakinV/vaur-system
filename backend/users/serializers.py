@@ -177,59 +177,30 @@ class MeSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
         )
 
 
-class StudentDetailSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
-    group_number = serializers.CharField(
-        source='group.number',
-        read_only=True,
-    )
-    
-    class Meta:
-        model = Student
-        fields = (
-            'email',
-            'full_name',
-            'last_name',
-            'first_name',
-            'middle_name',
-            'contacts',
-            'group_id',
-            'group_number',
-        )
-
-
-class TeacherDetailSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
-    department_name = serializers.CharField(
-        source='department.name',
-        read_only=True,
-    )
-    
-    class Meta:
-        model = Teacher
-        fields = (
-            'email',
-            'full_name',
-            'last_name',
-            'first_name',
-            'middle_name',
-            'contacts',
-            'department_id',
-            'department_name',
-            'is_norm_controller',
-        )
-
-
 class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
     group_number = serializers.CharField(
         source='group.number',
         read_only=True,
     )
     
-    class Meta:
+    class Meta():
         model = Student
         fields = (
             'full_name',
             'group_id',
             'group_number',
+        )
+
+
+class StudentDetailSerializer(StudentSerializer):
+    class Meta:
+        model = Student
+        fields = (
+            'email',
+            'last_name',
+            'first_name',
+            'middle_name',
+            'contacts',
         )
 
 
@@ -247,7 +218,19 @@ class TeacherSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
             'department_name',
             'is_norm_controller',
         )
-        
+
+
+class TeacherDetailSerializer(TeacherSerializer):
+    class Meta(TeacherSerializer.Meta):
+        model = Teacher
+        fields = TeacherSerializer.Meta.fields + (
+            'email',
+            'last_name',
+            'first_name',
+            'middle_name',
+            'contacts',
+        )
+
 
 class GroupSerializer(serializers.ModelSerializer):
     class Meta:
