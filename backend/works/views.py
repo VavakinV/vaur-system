@@ -9,7 +9,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from works.models import Work
-from works.serializers import WorkDocumentSerializer, WorkDocumentUploadSerializer
+from works.serializers import (
+    WorkDetailSerializer,
+    WorkDocumentSerializer,
+    WorkDocumentUploadSerializer,
+    WorkShortSerializer,
+)
 
 
 WORKS_TAG = ['Works']
@@ -33,24 +38,67 @@ def can_access_work(user, work):
     return False
 
 
-class WorkDocumentView(APIView):
-    parser_classes = (MultiPartParser, FormParser)
+def get_accessible_work(pk, user, denied_message):
+    try:
+        work = Work.objects.select_related(
+            'student__user',
+            'supervisor__user',
+            'department',
+            'work_type',
+        ).get(pk=pk)
+    except Work.DoesNotExist as exc:
+        raise NotFound('Work not found.') from exc
+
+    if not can_access_work(user, work):
+        raise PermissionDenied(denied_message)
+
+    return work
+
+
+class WorkBaseView(APIView):
+    access_denied_message = 'You have no access to this file.'
 
     def get_work(self, pk, user):
-        try:
-            work = Work.objects.select_related(
-                'student__user',
-                'supervisor__user',
-                'department',
-                'work_type',
-            ).get(pk=pk)
-        except Work.DoesNotExist as exc:
-            raise NotFound('Работа не найдена.') from exc
+        return get_accessible_work(pk, user, self.access_denied_message)
 
-        if not can_access_work(user, work):
-            raise PermissionDenied('Недостаточно прав для доступа к файлу работы.')
 
-        return work
+class WorkShortView(WorkBaseView):
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='work_short_get',
+        description='Return short information about a work by id.',
+        responses={
+            200: WorkShortSerializer,
+            403: OpenApiResponse(description='Permission denied'),
+            404: OpenApiResponse(description='Work not found'),
+        },
+    )
+    def get(self, request, pk):
+        work = self.get_work(pk, request.user)
+        serializer = WorkShortSerializer(work)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class WorkDetailView(WorkBaseView):
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='work_detail_get',
+        description='Return detailed information about a work by id.',
+        responses={
+            200: WorkDetailSerializer,
+            403: OpenApiResponse(description='Permission denied'),
+            404: OpenApiResponse(description='Work not found'),
+        },
+    )
+    def get(self, request, pk):
+        work = self.get_work(pk, request.user)
+        serializer = WorkDetailSerializer(work, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class WorkDocumentView(WorkBaseView):
+    parser_classes = (MultiPartParser, FormParser)
+    access_denied_message = 'You have no access to this work.'
 
     @extend_schema(
         tags=WORKS_TAG,
@@ -82,7 +130,7 @@ class WorkDocumentView(APIView):
     def get(self, request, pk):
         work = self.get_work(pk, request.user)
         if not work.document:
-            raise NotFound('Файл работы не загружен.')
+            raise NotFound('Work not found.')
 
         filename = work.document_original_name or Path(work.document.name).name
         response = FileResponse(work.document.open('rb'), as_attachment=True, filename=filename)
