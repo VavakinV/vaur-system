@@ -20,6 +20,7 @@ dependencies = [
 [tool.poetry]
 packages = [
     { include = "vaur" },
+    { include = "notifications" },
     { include = "users" },
     { include = "works" }
 ]
