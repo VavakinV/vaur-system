@@ -1,5 +1,3 @@
-<!-- TODO: Доделать получение групп в выпадающий список и отправку ID группы в запросе -->
-
 <template>
     <form class="auth-form" @submit.prevent="onSubmit">
         <h2 class="auth-form__title">Регистрация студента</h2>
@@ -13,6 +11,7 @@
                 class="auth-form__input"
                 type="text"
                 placeholder="Иванов"
+                required
             />
         </div>
 
@@ -24,6 +23,7 @@
                 class="auth-form__input"
                 type="text"
                 placeholder="Иван"
+                required
             />
         </div>
 
@@ -38,15 +38,31 @@
             />
         </div>
 
-        <div class="auth-form__field">
+        <div class="auth-form__field autocomplete-wrapper">
             <label class="auth-form__label" for="group_number">Группа</label>
             <input
                 id="group_number"
-                v-model="localGroupNumber"
+                v-model="searchGroupText"
                 class="auth-form__input"
                 type="text"
-                placeholder="Ваша группа"
+                placeholder="Начните вводить или выберите из списка"
+                autocomplete="off"
+                required
+                @focus="isDropdownOpen = true"
+                @blur="closeDropdown"
+                @input="onGroupInput"
             />
+            
+            <ul v-if="isDropdownOpen && filteredGroups.length" class="autocomplete-list">
+                <li
+                    v-for="group in filteredGroups"
+                    :key="group.id"
+                    class="autocomplete-item"
+                    @mousedown.prevent="selectGroup(group)"
+                >
+                    {{ group.number }}
+                </li>
+            </ul>
         </div>
 
         <div class="auth-form__field">
@@ -57,6 +73,7 @@
                 class="auth-form__input"
                 type="email"
                 placeholder="name@example.com"
+                required
             />
         </div>
 
@@ -68,6 +85,7 @@
                 class="auth-form__input"
                 type="password"
                 placeholder="Введите пароль"
+                required
             />
         </div>
 
@@ -79,6 +97,7 @@
                 class="auth-form__input"
                 type="password"
                 placeholder="Повторите пароль"
+                required
             />
         </div>
 
@@ -98,6 +117,8 @@
 </template>
 
 <script>
+import { apiClient } from "@/api/auth"
+
 export default {
     name: "RegistrationForm",
 
@@ -115,15 +136,59 @@ export default {
             localLastName: "",
             localFirstName: "",
             localMiddleName: "",
-            localGroupNumber: "",
             localEmail: "",
             localPassword: "",
             localPasswordConfirm: "",
-            localError: ""
+            localError: "",
+
+            groups: [],
+            searchGroupText: "",
+            selectedGroupId: null,
+            isDropdownOpen: false,
         }
     },
 
+    computed: {
+        filteredGroups() {
+            if (!this.searchGroupText) {
+                return this.groups
+            }
+            const lowerSearch = this.searchGroupText.toLowerCase()
+            return this.groups.filter(group => 
+                group.number.toLowerCase().includes(lowerSearch)
+            )
+        }
+    },
+
+    async mounted() {
+        await this.fetchGroups()
+    },
+
     methods: {
+        async fetchGroups() {
+            try {
+                const response = await apiClient.get("/groups/")
+                this.groups = response.data
+            } catch (error) {
+                console.error("Не удалось загрузить список групп:", error)
+            }
+        },
+
+        onGroupInput() {
+            this.selectedGroupId = null
+            this.isDropdownOpen = true
+        },
+
+        selectGroup(group) {
+            this.searchGroupText = group.number
+            this.selectedGroupId = group.id
+            this.isDropdownOpen = false
+        },
+
+        closeDropdown() {
+            this.isDropdownOpen = false
+        },
+
         onSubmit() {
             this.localError = ""
 
@@ -132,13 +197,27 @@ export default {
                 return
             }
 
+            if (!this.selectedGroupId) {
+                const exactMatch = this.groups.find(
+                    g => g.number.toLowerCase() === this.searchGroupText.trim().toLowerCase()
+                )
+                if (exactMatch) {
+                    this.selectedGroupId = exactMatch.id
+                } else {
+                    this.localError = "Пожалуйста, выберите существующую группу из списка"
+                    return
+                }
+            }
+
             this.$emit("submit", {
+                username: this.localEmail,
+                email: this.localEmail,
+                password: this.localPassword,
                 last_name: this.localLastName,
                 first_name: this.localFirstName,
                 middle_name: this.localMiddleName,
-                group_number: this.localGroupNumber,
-                email: this.localEmail,
-                password: this.localPassword
+                contacts: "",
+                group_number: this.selectedGroupId
             })
         }
     }
@@ -240,5 +319,53 @@ export default {
     text-align: center;
     text-decoration: underline;
     cursor: pointer;
+}
+
+.autocomplete-wrapper {
+    position: relative;
+}
+
+.autocomplete-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 200px;
+    overflow-y: auto;
+    margin: 4px 0 0;
+    padding: 0;
+    background: #f3f6f4;
+    border: 1px solid #005b96;
+    border-radius: 12px;
+    list-style: none;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.autocomplete-item {
+    padding: 12px 14px;
+    font-size: 18px;
+    color: #011f4b;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.autocomplete-item:hover {
+    background-color: #d1e0e8;
+}
+
+/* Кастомизация скроллбара для выпадающего списка */
+.autocomplete-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.autocomplete-list::-webkit-scrollbar-track {
+    background: #f3f6f4;
+    border-radius: 12px;
+}
+
+.autocomplete-list::-webkit-scrollbar-thumb {
+    background-color: #005b96;
+    border-radius: 12px;
 }
 </style>
