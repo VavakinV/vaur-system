@@ -6,6 +6,7 @@ import Register from '@/views/RegisterView'
 import Works from '@/views/WorksView'
 import Forbidden from '@/views/ForbiddenView'
 import Profile from '@/views/ProfileView.vue'
+import Work from '@/views/WorkIdView.vue'
 
 const routes = [
     {
@@ -45,7 +46,17 @@ const routes = [
         meta: {
             requiresAuth: true,
             roles: ["admin", "student", "teacher"]
+        },
+        meta: {
+            requiresAuth: true,
+            roles: ["admin", "student", "teacher"]
         }
+    },
+    {
+        path: '/work/:id',
+        name: 'workDetail',
+        component: Work,
+        props: true
     },
     {
         path: '/forbidden',

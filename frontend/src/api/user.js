@@ -1,14 +1,4 @@
-import axios from "axios"
-import { getApiBaseUrl } from "./baseUrl"
-
-const API_URL = getApiBaseUrl()
-
-export const apiClient = axios.create({
-    baseURL: API_URL,
-    headers: {
-        "Content-Type": "application/json"
-    }
-})
+import { apiClient } from "@/api/auth";
 
 export default {
 
@@ -18,25 +8,18 @@ export default {
     //     return response.data;
     // },
 
-    // МОКОВАЯ ВЕРСИЯ:
+    // МОКОВАЯ ВЕРСИЯ
     async getUserById(id) {
-        console.warn(`Запрос данных для пользователя с ID: ${id} (MOCK)`);
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                resolve({
-                    id: id,
-                    username: "mock_user_" + id,
-                    email: "student_" + id + "@example.com",
-                    last_name: "Иванов",
-                    first_name: "Иван",
-                    middle_name: "Иванович",
-                    contacts: "Телеграм: @ivan_student",
-                    role: "student",
-                    is_staff: false,
-                    is_superuser: false
-                });
-            }, 500);
-        });
+        return {
+            id: id,
+            last_name: "Тестовый",
+            first_name: "Студент",
+            middle_name: "Иванович",
+            email: "test@example.com",
+            role: "student",
+            contacts: "Бэкенд скоро починят, и здесь будут реальные контакты",
+            group: { number: "ФИ41" }
+        };
     },
 
     // РАБОЧАЯ ВЕРСИЯ
