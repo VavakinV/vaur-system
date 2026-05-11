@@ -235,7 +235,7 @@ class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
         model = Student
         fields = (
             'full_name',
-            'group_id',
+            'group_number_id',
             'group_number',
         )
 
