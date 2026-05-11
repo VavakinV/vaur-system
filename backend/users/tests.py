@@ -301,6 +301,68 @@ class UsersApiTests(APITestCase):
         self.assertEqual(response.data['role'], User.Role.STUDENT)
         self.assertFalse(response.data['is_staff'])
         self.assertFalse(response.data['is_superuser'])
+        self.assertEqual(response.data['group_id'], self.group.id)
+        self.assertEqual(response.data['group_number'], self.group.number)
+
+    def test_me_returns_teacher_specific_profile_fields(self):
+        self.authenticate(self.teacher_user)
+
+        response = self.client.get(self.me_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['role'], User.Role.TEACHER)
+        self.assertEqual(response.data['department_id'], self.department.id)
+        self.assertEqual(response.data['department_name'], self.department.name)
+        self.assertTrue(response.data['is_norm_controller'])
+        self.assertIsNone(response.data['student_limit'])
+
+    def test_me_patch_updates_current_student_profile(self):
+        self.authenticate(self.student_user)
+
+        payload = {
+            'email': 'updated_student@example.com',
+            'first_name': 'Updated',
+            'contacts': 'updated contacts',
+        }
+
+        response = self.client.patch(self.me_url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.student_user.refresh_from_db()
+        self.assertEqual(self.student_user.email, payload['email'])
+        self.assertEqual(self.student_user.first_name, payload['first_name'])
+        self.assertEqual(self.student_user.contacts, payload['contacts'])
+        self.assertEqual(response.data['group_id'], self.group.id)
+        self.assertEqual(response.data['group_number'], self.group.number)
+
+    def test_me_patch_updates_current_teacher_profile(self):
+        self.authenticate(self.teacher_user)
+
+        payload = {
+            'last_name': 'UpdatedTeacher',
+            'contacts': 'teacher contacts',
+        }
+
+        response = self.client.patch(self.me_url, payload, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.teacher_user.refresh_from_db()
+        self.assertEqual(self.teacher_user.last_name, payload['last_name'])
+        self.assertEqual(self.teacher_user.contacts, payload['contacts'])
+        self.assertEqual(response.data['department_id'], self.department.id)
+        self.assertEqual(response.data['department_name'], self.department.name)
+
+    def test_me_patch_rejects_duplicate_email(self):
+        self.authenticate(self.student_user)
+
+        response = self.client.patch(
+            self.me_url,
+            {'email': self.teacher_user.email},
+            format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('email', response.data)
 
     def test_logout_blacklists_current_users_refresh_token(self):
         refresh = self.authenticate(self.student_user)
