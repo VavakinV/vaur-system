@@ -12,8 +12,9 @@ class FullNameSerializerMixin(serializers.Serializer):
                 obj.get('middle_name'),
             ]))
 
+        user = getattr(obj, 'user', obj)
         return ' '.join(filter(None, [
-            getattr(obj, 'last_name', None),
-            getattr(obj, 'first_name', None),
-            getattr(obj, 'middle_name', None),
+            getattr(user, 'last_name', None),
+            getattr(user, 'first_name', None),
+            getattr(user, 'middle_name', None),
         ]))

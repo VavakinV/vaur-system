@@ -215,8 +215,8 @@ class UserDetailView(APIView):
     )
     def get(self, request, pk):
         user = User.objects.get(pk=pk)
-
-        serializer = USER_DETAIL_SERIALIZERS[user.role](user)
+        profile = user.student_profile if user.role == User.Role.STUDENT else user.teacher_profile
+        serializer = USER_DETAIL_SERIALIZERS[user.role](profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -237,8 +237,8 @@ class UserView(APIView):
     )
     def get(self, request, pk):
         user = User.objects.get(pk=pk)
-
-        serializer = USER_SERIALIZERS[user.role](user)
+        profile = user.student_profile if user.role == User.Role.STUDENT else user.teacher_profile
+        serializer = USER_SERIALIZERS[user.role](profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class GroupView(APIView):
