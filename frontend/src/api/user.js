@@ -24,7 +24,7 @@ export default {
 
     // РАБОЧАЯ ВЕРСИЯ
     // async updateContacts(contacts) {
-    //     const response = await apiClient.patch('/auth/me/', { contacts });
+    //     const response = await apiClient.patch('/users/me/', { contacts });
     //     return response.data;
     // },
 
