@@ -1,4 +1,4 @@
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import AllowAny
@@ -11,16 +11,20 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from users.serializers import (
     AccessTokenSerializer,
     AuthTokensSerializer,
+    BaseMeSerializer,
     EmailOrUsernameTokenObtainPairSerializer,
     LoginSerializer,
     LogoutSerializer,
-    MeSerializer,
     MessageSerializer,
     RefreshTokenSerializer,
     RegisterResponseSerializer,
     RegisterSerializer,
     GroupSerializer,
+    StudentMePatchSerializer,
+    StudentMeSerializer,
     TeacherDetailSerializer,
+    TeacherMePatchSerializer,
+    TeacherMeSerializer,
     StudentDetailSerializer,
     TeacherSerializer,
     StudentSerializer,
@@ -32,6 +36,26 @@ from users.models import User, Group
 AUTH_TAG = ['Auth']
 USERS_TAG = ['Users']
 GROUPS_TAG = ['Groups']
+
+ME_READ_SERIALIZERS = {
+    User.Role.STUDENT: StudentMeSerializer,
+    User.Role.TEACHER: TeacherMeSerializer,
+}
+
+ME_WRITE_SERIALIZERS = {
+    User.Role.STUDENT: StudentMePatchSerializer,
+    User.Role.TEACHER: TeacherMePatchSerializer,
+}
+
+USER_DETAIL_SERIALIZERS = {
+    User.Role.STUDENT: StudentDetailSerializer,
+    User.Role.TEACHER: TeacherDetailSerializer,
+}
+
+USER_SERIALIZERS = {
+    User.Role.STUDENT: StudentSerializer,
+    User.Role.TEACHER: TeacherSerializer,
+}
 
 
 class RegisterView(APIView):
@@ -120,15 +144,58 @@ class LogoutView(APIView):
 
 
 class MeView(APIView):
+    def get_read_serializer_class(self, user):
+        return ME_READ_SERIALIZERS[user.role]
+
+    def get_write_serializer_class(self, user):
+        return ME_WRITE_SERIALIZERS[user.role]
+
     @extend_schema(
         tags=USERS_TAG,
-        operation_id='auth_me',
+        operation_id='users_me',
         description='Return the authenticated user profile.',
-        responses={200: MeSerializer, 401: OpenApiResponse(description='Authentication required')},
+        responses={
+            200: PolymorphicProxySerializer(
+                component_name='MeResponse',
+                serializers=[StudentMeSerializer, TeacherMeSerializer],
+                resource_type_field_name='role',
+            ),
+            401: OpenApiResponse(description='Authentication required'),
+        },
     )
     def get(self, request):
-        serializer = MeSerializer(request.user)
-        return Response(serializer.data)
+        serializer_class = self.get_read_serializer_class(request.user)
+        return Response(serializer_class(request.user).data)
+
+    @extend_schema(
+        tags=USERS_TAG,
+        operation_id='users_me_patch',
+        description='Patch current user fields.',
+        request=PolymorphicProxySerializer(
+            component_name='MePatchRequest',
+            serializers=[StudentMePatchSerializer, TeacherMePatchSerializer],
+            resource_type_field_name=None,
+        ),
+        responses={
+            200: PolymorphicProxySerializer(
+                component_name='MePatchResponse',
+                serializers=[StudentMeSerializer, TeacherMeSerializer],
+                resource_type_field_name='role',
+            ),
+            401: OpenApiResponse(description='Authentication required'),
+        },
+    )
+    def patch(self, request):
+        serializer_class = self.get_write_serializer_class(request.user)
+        serializer = serializer_class(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        response_serializer_class = self.get_read_serializer_class(request.user)
+        return Response(response_serializer_class(request.user).data, status=status.HTTP_200_OK)
 
 
 class UserDetailView(APIView):
@@ -137,19 +204,15 @@ class UserDetailView(APIView):
         operation_id='user_detail_get',
         description='Return the user detail information by id.',
         responses={
-            200: MeSerializer,
+            200: User,
             401: OpenApiResponse(description='Authentication required'),
             404: OpenApiResponse(description='User not found'),
         },
     )
     def get(self, request, pk):
         user = User.objects.get(pk=pk)
-        
-        if user.role == 'teacher':
-            serializer = TeacherDetailSerializer(user)
-        else:
-            serializer = StudentDetailSerializer(user)
-        
+
+        serializer = USER_DETAIL_SERIALIZERS[user.role](user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
@@ -159,22 +222,20 @@ class UserView(APIView):
         operation_id='user_get',
         description='Return the user profile by id.',
         responses={
-            200: MeSerializer,
+            200: BaseMeSerializer,
             401: OpenApiResponse(description='Authentication required'),
             404: OpenApiResponse(description='User not found'),
         },
     )
     def get(self, request, pk):
         user = User.objects.get(pk=pk)
-        
-        if user.role == 'teacher':
-            serializer = TeacherSerializer(user)
-        else:
-            serializer = StudentSerializer(user)
-        
+
+        serializer = USER_SERIALIZERS[user.role](user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class GroupView(APIView):
+    permission_classes = [AllowAny]
+    
     @extend_schema(
         tags=GROUPS_TAG,
         operation_id="groups_get",

@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model, password_validation
 from django.db import transaction
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.mixins import FullNameSerializerMixin
 from users.models import Group, Student, Teacher
@@ -41,7 +41,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         group = attrs.get('group_number')
         if group is None:
             raise serializers.ValidationError({'group_number': 'This field is required.'})
-
         return attrs
 
     @transaction.atomic
@@ -54,7 +53,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.save()
 
         Student.objects.create(user=user, group_number=group)
-
         return user
 
 
@@ -159,7 +157,7 @@ class RegisterResponseSerializer(FullNameSerializerMixin, serializers.ModelSeria
         }
 
 
-class MeSerializer(FullNameSerializerMixin, serializers.ModelSerializer):    
+class BaseMeSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = User
         fields = (
@@ -175,15 +173,65 @@ class MeSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
             'is_staff',
             'is_superuser',
         )
+        read_only_fields = fields
+
+
+class StudentMeSerializer(BaseMeSerializer):
+    group_id = serializers.IntegerField(source='student_profile.group_number_id', read_only=True)
+    group_number = serializers.CharField(source='student_profile.group_number.number', read_only=True)
+
+    class Meta(BaseMeSerializer.Meta):
+        fields = BaseMeSerializer.Meta.fields + (
+            'group_id',
+            'group_number',
+        )
+
+
+class TeacherMeSerializer(BaseMeSerializer):
+    department_id = serializers.IntegerField(source='teacher_profile.department_id', read_only=True)
+    department_name = serializers.CharField(source='teacher_profile.department.name', read_only=True)
+    student_limit = serializers.IntegerField(source='teacher_profile.student_limit', read_only=True)
+    is_norm_controller = serializers.BooleanField(source='teacher_profile.is_norm_controller', read_only=True)
+
+    class Meta(BaseMeSerializer.Meta):
+        fields = BaseMeSerializer.Meta.fields + (
+            'department_id',
+            'department_name',
+            'student_limit',
+            'is_norm_controller',
+        )
+
+
+class BaseMePatchSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'email',
+            'last_name',
+            'first_name',
+            'middle_name',
+            'contacts',
+        )
+
+    def validate_email(self, value):
+        user = self.instance
+        if User.objects.exclude(pk=user.pk).filter(email__iexact=value).exists():
+            raise serializers.ValidationError('User with this email already exists.')
+        return value
+
+
+class StudentMePatchSerializer(BaseMePatchSerializer):
+    pass
+
+
+class TeacherMePatchSerializer(BaseMePatchSerializer):
+    pass
 
 
 class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
-    group_number = serializers.CharField(
-        source='group.number',
-        read_only=True,
-    )
-    
-    class Meta():
+    group_number = serializers.CharField(source='group.number', read_only=True)
+
+    class Meta:
         model = Student
         fields = (
             'full_name',
@@ -192,10 +240,18 @@ class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
         )
 
 
-class StudentDetailSerializer(StudentSerializer):
-    class Meta:
-        model = Student
-        fields = (
+class UserDetailFieldsMixin(serializers.Serializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    middle_name = serializers.CharField(source='user.middle_name', read_only=True)
+    contacts = serializers.CharField(source='user.contacts', read_only=True)
+
+
+class StudentDetailSerializer(UserDetailFieldsMixin, StudentSerializer):
+
+    class Meta(StudentSerializer.Meta):
+        fields = StudentSerializer.Meta.fields + (
             'email',
             'last_name',
             'first_name',
@@ -205,11 +261,8 @@ class StudentDetailSerializer(StudentSerializer):
 
 
 class TeacherSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
-    department_name = serializers.CharField(
-        source='department.name',
-        read_only=True,
-    )
-    
+    department_name = serializers.CharField(source='department.name', read_only=True)
+
     class Meta:
         model = Teacher
         fields = (
@@ -220,9 +273,9 @@ class TeacherSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
         )
 
 
-class TeacherDetailSerializer(TeacherSerializer):
+class TeacherDetailSerializer(UserDetailFieldsMixin, TeacherSerializer):
+
     class Meta(TeacherSerializer.Meta):
-        model = Teacher
         fields = TeacherSerializer.Meta.fields + (
             'email',
             'last_name',
