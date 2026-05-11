@@ -31,19 +31,10 @@ export default {
         async onSubmit(formData) {
             this.error = ""
 
-            const payload = {
-                username: this.buildUsername(formData.email),
-                email: formData.email,
-                password: formData.password,
-                last_name: formData.last_name,
-                first_name: formData.first_name,
-                middle_name: formData.middle_name,
-                contacts: "",
-                group_number: formData.group_number
-            }
+            formData.contacts = ""
 
             try {
-                await this.$store.dispatch("auth/register", payload)
+                await this.$store.dispatch("auth/register", formData)
 
                 const redirect = this.$route.query.redirect || "/works"
                 this.$router.replace(redirect)

@@ -73,24 +73,22 @@ export default {
         return this.$store.getters["auth/user"];
     },
     isOwnProfile() {
-        if (!this.currentUser || !this.id) return false;
-        return String(this.currentUser.id) === String(this.id);
+        const authUser = this.$store.getters["auth/user"];
+        if (!authUser || !this.id) return false;
+        return String(authUser.id) === String(this.id);
     },
     fullDisplayName() {
         const u = this.profileUser;
-        return `${u.last_name} ${u.first_name} ${u.middle_name}`.trim();
+        return `${u.full_name}`.trim();
     }
   },
   methods: {
     async fetchProfileData() {
         this.loading = true;
         try {
-            if (this.isOwnProfile) {
-            this.profileUser = this.currentUser;
-            } else {
             this.profileUser = await userApi.getUserById(this.id);
-            }
-            this.editedContacts = this.profileUser.contacts;
+        
+            this.editedContacts = this.profileUser.contacts || "";
             this.isTeacher = this.profileUser.role === "teacher";
         } catch (e) {
             console.error("Ошибка загрузки профиля", e);
@@ -219,6 +217,7 @@ textarea {
     font-size: 16px;
     resize: vertical;
     outline: none;
+    overflow-wrap: break-word;
 }
 
 textarea:focus {

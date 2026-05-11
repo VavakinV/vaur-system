@@ -94,8 +94,8 @@ export default {
         this.work = await workApi.getWorkById(this.id);
 
         // МОКОВЫЕ ДАННЫЕ, ДОБАВИТЬ НА БЭКЕ
-        this.work.student_id = 2; 
-        this.work.supervisor_id = 1;
+        // this.work.student_id = 2; 
+        // this.work.supervisor_id = 1;
       } catch (e) {
         console.error("Ошибка загрузки работы", e);
       } finally {

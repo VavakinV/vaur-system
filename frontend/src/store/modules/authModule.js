@@ -22,7 +22,8 @@ export const authModule = {
         isAuthenticated: (state) => !!state.accessToken,
         id: (state) => state.user?.id || null,
         role: (state) => state.user?.role || null,
-        userName: (state) => state.user ? `${state.user.first_name} ${state.user.last_name}` : 'Гость'
+        userName: (state) => state.user ? `${state.user.first_name} ${state.user.last_name}` : 'Гость',
+        user: (state) => state.user,
     },
 
     mutations: {
