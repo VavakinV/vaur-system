@@ -39,7 +39,7 @@ export default {
                 first_name: formData.first_name,
                 middle_name: formData.middle_name,
                 contacts: "",
-                group_number: 0
+                group_number: formData.group_number
             }
 
             try {
