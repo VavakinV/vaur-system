@@ -81,14 +81,14 @@ class Work(models.Model):
     )
     status = models.CharField(
         max_length=30,
-        choices=NormControlStatus.choices,
-        default=NormControlStatus.NOT_SENT,
+        choices=Status.choices,
+        default=Status.NOT_SENT,
         verbose_name='Статус работы',
     )
     norm_control_status = models.CharField(
         max_length=20,
-        choices=Status.choices,
-        default=Status.NOT_SENT,
+        choices=NormControlStatus.choices,
+        default=NormControlStatus.NOT_SENT,
         verbose_name='Статус нормоконтроля',
     )
 
