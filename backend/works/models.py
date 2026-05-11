@@ -32,6 +32,16 @@ class Work(models.Model):
         PENDING = 'pending', 'В ожидании'
         NOT_SENT = 'not_sent', 'Не отправлено'
 
+
+    class Status(models.TextChoices):
+        DONE = 'done', 'Сдана'
+        NOT_SENT = 'not_sent', 'Не отправлена'
+        IN_PROGRESS = 'in_progress', 'В работе'
+        STUDENT_EDIT = 'student_edit', 'Правки от студента'
+        SUPERVISOR_EDIT = 'supervisor_edit', 'Правки от руководителя'
+        NORMCONTROLLER_EDIT = 'normcontroller_edit', 'Правки от нормоконтролера'
+
+
     student = models.ForeignKey(
         Student,
         on_delete=models.CASCADE,
@@ -69,10 +79,16 @@ class Work(models.Model):
         blank=True,
         verbose_name='Оригинальное имя файла',
     )
+    status = models.CharField(
+        max_length=30,
+        choices=NormControlStatus.choices,
+        default=NormControlStatus.NOT_SENT,
+        verbose_name='Статус работы',
+    )
     norm_control_status = models.CharField(
         max_length=20,
         choices=NormControlStatus.choices,
-        default=NormControlStatus.PENDING,
+        default=NormControlStatus.NOT_SENT,
         verbose_name='Статус нормоконтроля',
     )
 
