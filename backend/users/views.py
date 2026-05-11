@@ -204,7 +204,11 @@ class UserDetailView(APIView):
         operation_id='user_detail_get',
         description='Return the user detail information by id.',
         responses={
-            200: User,
+            200: PolymorphicProxySerializer(
+                component_name='UserDetailResponse',
+                serializers=[StudentDetailSerializer, TeacherDetailSerializer],
+                resource_type_field_name='role',
+            ),
             401: OpenApiResponse(description='Authentication required'),
             404: OpenApiResponse(description='User not found'),
         },
@@ -222,7 +226,11 @@ class UserView(APIView):
         operation_id='user_get',
         description='Return the user profile by id.',
         responses={
-            200: BaseMeSerializer,
+            200: PolymorphicProxySerializer(
+                component_name='UserResponse',
+                serializers=[StudentSerializer, TeacherSerializer],
+                resource_type_field_name='role',
+            ),
             401: OpenApiResponse(description='Authentication required'),
             404: OpenApiResponse(description='User not found'),
         },
