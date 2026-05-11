@@ -2,7 +2,7 @@ import { apiClient } from "@/api/auth";
 
 export default {
     async getWorkById(id) {
-        const response = await apiClient.get(`/works/${id}/`);
+        const response = await apiClient.get(`/works/${id}/detail/`);
         return response.data;
     },
     async uploadDocument(id, file) {

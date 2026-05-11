@@ -45,7 +45,7 @@
                 v-model="searchGroupText"
                 class="auth-form__input"
                 type="text"
-                placeholder="Начните вводить или выберите из списка"
+                placeholder="Выберите группу из списка"
                 autocomplete="off"
                 required
                 @focus="isDropdownOpen = true"
@@ -354,7 +354,6 @@ export default {
     background-color: #d1e0e8;
 }
 
-/* Кастомизация скроллбара для выпадающего списка */
 .autocomplete-list::-webkit-scrollbar {
     width: 8px;
 }
@@ -367,5 +366,24 @@ export default {
 .autocomplete-list::-webkit-scrollbar-thumb {
     background-color: #005b96;
     border-radius: 12px;
+}
+@media (max-width: 480px) {
+    .auth-form {
+        padding: 20px;
+    }
+
+    .auth-form__title {
+        font-size: 28px;
+    }
+
+    .auth-form__subtitle {
+        font-size: 18px;
+    }
+
+    .auth-form__label,
+    .auth-form__footer,
+    .auth-form__link-to-register {
+        font-size: 18px;
+    }
 }
 </style>
