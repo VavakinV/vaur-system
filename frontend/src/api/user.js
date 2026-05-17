@@ -1,4 +1,4 @@
-import { apiClient } from "@/api/auth";
+import { apiClient } from "@/api/client";
 
 export default {
     async getUserById(id) {
