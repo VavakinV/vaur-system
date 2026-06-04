@@ -1,0 +1,1033 @@
+openapi: 3.0.3
+info:
+  title: Vaur API
+  version: 1.0.0
+  description: API documentation for the Vaur backend.
+paths:
+  /auth/login/:
+    post:
+      operationId: auth_login
+      description: Authenticate by username or email and return a JWT access/refresh
+        token pair.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Login'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Login'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Login'
+        required: true
+      security:
+      - BearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokens'
+          description: ''
+        '401':
+          description: Invalid credentials
+  /auth/logout/:
+    post:
+      operationId: auth_logout
+      description: Blacklist the provided refresh token so it can no longer be used.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Logout'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Logout'
+        required: true
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+          description: ''
+        '400':
+          description: Invalid or expired refresh token
+        '401':
+          description: Authentication required
+  /auth/refresh/:
+    post:
+      operationId: auth_refresh
+      description: Exchange a refresh token for a new access token.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshToken'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RefreshToken'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RefreshToken'
+        required: true
+      security:
+      - BearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessToken'
+          description: ''
+        '401':
+          description: Invalid refresh token
+  /auth/register/:
+    post:
+      operationId: auth_register
+      description: Register a new student account and return JWT tokens.
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Register'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Register'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Register'
+        required: true
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterResponse'
+          description: ''
+  /groups/:
+    get:
+      operationId: groups_get
+      description: Get groups list or group by id
+      tags:
+      - Groups
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
+        '404':
+          description: Group not found
+  /groups/{id}/:
+    get:
+      operationId: groups_get_2
+      description: Get groups list or group by id
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Groups
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
+        '404':
+          description: Group not found
+  /users/{id}/:
+    get:
+      operationId: user_get
+      description: Return the user profile by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+          description: ''
+        '401':
+          description: Authentication required
+        '404':
+          description: User not found
+  /users/{id}/detail/:
+    get:
+      operationId: user_detail_get
+      description: Return the user detail information by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponse'
+          description: ''
+        '401':
+          description: Authentication required
+        '404':
+          description: User not found
+  /users/me/:
+    get:
+      operationId: users_me
+      description: Return the authenticated user profile.
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MeResponse'
+          description: ''
+        '401':
+          description: Authentication required
+    patch:
+      operationId: users_me_patch
+      description: Patch current user fields.
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMePatch'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMePatch'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMePatch'
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MePatchResponse'
+          description: ''
+        '401':
+          description: Authentication required
+  /works/{id}/:
+    get:
+      operationId: work_short_get
+      description: Return short information about a work by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Works
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkShort'
+          description: ''
+        '403':
+          description: Permission denied
+        '404':
+          description: Work not found
+  /works/{id}/detail/:
+    get:
+      operationId: work_detail_get
+      description: Return detailed information about a work by id.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Works
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkDetail'
+          description: ''
+        '403':
+          description: Permission denied
+        '404':
+          description: Work not found
+  /works/{id}/document/:
+    get:
+      operationId: work_download_document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Works
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          description: DOCX file
+        '403':
+          description: Permission denied
+        '404':
+          description: Work or file not found
+    post:
+      operationId: work_upload_document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Works
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/WorkDocumentUpload'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/WorkDocumentUpload'
+        required: true
+      security:
+      - jwtAuth: []
+      - BearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WorkDocument'
+          description: ''
+        '403':
+          description: Permission denied
+        '404':
+          description: Work not found
+components:
+  schemas:
+    AccessToken:
+      type: object
+      properties:
+        access:
+          type: string
+      required:
+      - access
+    AuthTokens:
+      type: object
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    Group:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        number:
+          type: string
+          title: Номер группы
+          maxLength: 10
+      required:
+      - id
+      - number
+    Login:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+      - password
+    Logout:
+      type: object
+      properties:
+        refresh:
+          type: string
+      required:
+      - refresh
+    MePatchResponse:
+      oneOf:
+      - $ref: '#/components/schemas/StudentMe'
+      - $ref: '#/components/schemas/TeacherMe'
+      discriminator:
+        propertyName: role
+        mapping:
+          null: '#/components/schemas/TeacherMe'
+    MeResponse:
+      oneOf:
+      - $ref: '#/components/schemas/StudentMe'
+      - $ref: '#/components/schemas/TeacherMe'
+      discriminator:
+        propertyName: role
+        mapping:
+          null: '#/components/schemas/TeacherMe'
+    Message:
+      type: object
+      properties:
+        detail:
+          type: string
+      required:
+      - detail
+    NormControlStatusEnum:
+      enum:
+      - passed
+      - needs_changes
+      - pending
+      - not_sent
+      type: string
+      description: |-
+        * `passed` - Пройден
+        * `needs_changes` - Есть исправления
+        * `pending` - В ожидании
+        * `not_sent` - Не отправлено
+    PatchedMePatch:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 50
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 50
+        middle_name:
+          type: string
+          nullable: true
+          title: Отчество
+          maxLength: 50
+        contacts:
+          type: string
+          nullable: true
+          title: Контакты
+          maxLength: 300
+    RefreshToken:
+      type: object
+      properties:
+        refresh:
+          type: string
+      required:
+      - refresh
+    Register:
+      type: object
+      properties:
+        username:
+          type: string
+          title: Имя пользователя
+          description: Обязательное поле. Не более 150 символов. Только буквы, цифры
+            и символы @/./+/-/_.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 50
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 50
+        middle_name:
+          type: string
+          nullable: true
+          title: Отчество
+          maxLength: 50
+        contacts:
+          type: string
+          nullable: true
+          title: Контакты
+          maxLength: 300
+        group_number:
+          type: integer
+          writeOnly: true
+      required:
+      - email
+      - first_name
+      - group_number
+      - last_name
+      - password
+      - username
+    RegisterResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          title: Имя пользователя
+          description: Обязательное поле. Не более 150 символов. Только буквы, цифры
+            и символы @/./+/-/_.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Адрес электронной почты
+          maxLength: 254
+        full_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          title: Фамилия
+          maxLength: 50
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 50
+        middle_name:
+          type: string
+          nullable: true
+          title: Отчество
+          maxLength: 50
+        contacts:
+          type: string
+          nullable: true
+          title: Контакты
+          maxLength: 300
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          title: Роль
+        access:
+          type: string
+        refresh:
+          type: string
+      required:
+      - access
+      - email
+      - first_name
+      - full_name
+      - id
+      - last_name
+      - refresh
+      - role
+      - username
+    RoleEnum:
+      enum:
+      - student
+      - teacher
+      type: string
+      description: |-
+        * `student` - Student
+        * `teacher` - Teacher
+    Student:
+      type: object
+      properties:
+        full_name:
+          type: string
+          readOnly: true
+        group_number_id:
+          type: integer
+          title: Группа
+          readOnly: true
+        group_number:
+          type: string
+          readOnly: true
+      required:
+      - full_name
+      - group_number
+      - group_number_id
+    StudentDetail:
+      type: object
+      properties:
+        full_name:
+          type: string
+          readOnly: true
+        group_number_id:
+          type: integer
+          title: Группа
+          readOnly: true
+        group_number:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        middle_name:
+          type: string
+          readOnly: true
+        contacts:
+          type: string
+          readOnly: true
+      required:
+      - contacts
+      - email
+      - first_name
+      - full_name
+      - group_number
+      - group_number_id
+      - last_name
+      - middle_name
+    StudentMe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          title: Имя пользователя
+          description: Обязательное поле. Не более 150 символов. Только буквы, цифры
+            и символы @/./+/-/_.
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Адрес электронной почты
+        full_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+          title: Фамилия
+        first_name:
+          type: string
+          readOnly: true
+          title: Имя
+        middle_name:
+          type: string
+          readOnly: true
+          nullable: true
+          title: Отчество
+        contacts:
+          type: string
+          readOnly: true
+          nullable: true
+          title: Контакты
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+          title: Роль
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Статус персонала
+          description: Отметьте, если пользователь может входить в административную
+            часть сайта.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Статус суперпользователя
+          description: Указывает, что пользователь имеет все права без явного их назначения.
+        group_id:
+          type: integer
+          readOnly: true
+        group_number:
+          type: string
+          readOnly: true
+      required:
+      - contacts
+      - email
+      - first_name
+      - full_name
+      - group_id
+      - group_number
+      - id
+      - is_staff
+      - is_superuser
+      - last_name
+      - middle_name
+      - role
+      - username
+    Teacher:
+      type: object
+      properties:
+        full_name:
+          type: string
+          readOnly: true
+        department_id:
+          type: integer
+          title: Кафедра
+          readOnly: true
+        department_name:
+          type: string
+          readOnly: true
+        is_norm_controller:
+          type: boolean
+          title: Является нормоконтролером
+      required:
+      - department_id
+      - department_name
+      - full_name
+    TeacherDetail:
+      type: object
+      properties:
+        full_name:
+          type: string
+          readOnly: true
+        department_id:
+          type: integer
+          title: Кафедра
+          readOnly: true
+        department_name:
+          type: string
+          readOnly: true
+        is_norm_controller:
+          type: boolean
+          title: Является нормоконтролером
+        email:
+          type: string
+          format: email
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+        middle_name:
+          type: string
+          readOnly: true
+        contacts:
+          type: string
+          readOnly: true
+      required:
+      - contacts
+      - department_id
+      - department_name
+      - email
+      - first_name
+      - full_name
+      - last_name
+      - middle_name
+    TeacherMe:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          readOnly: true
+          title: Имя пользователя
+          description: Обязательное поле. Не более 150 символов. Только буквы, цифры
+            и символы @/./+/-/_.
+        email:
+          type: string
+          format: email
+          readOnly: true
+          title: Адрес электронной почты
+        full_name:
+          type: string
+          readOnly: true
+        last_name:
+          type: string
+          readOnly: true
+          title: Фамилия
+        first_name:
+          type: string
+          readOnly: true
+          title: Имя
+        middle_name:
+          type: string
+          readOnly: true
+          nullable: true
+          title: Отчество
+        contacts:
+          type: string
+          readOnly: true
+          nullable: true
+          title: Контакты
+        role:
+          allOf:
+          - $ref: '#/components/schemas/RoleEnum'
+          readOnly: true
+          title: Роль
+        is_staff:
+          type: boolean
+          readOnly: true
+          title: Статус персонала
+          description: Отметьте, если пользователь может входить в административную
+            часть сайта.
+        is_superuser:
+          type: boolean
+          readOnly: true
+          title: Статус суперпользователя
+          description: Указывает, что пользователь имеет все права без явного их назначения.
+        department_id:
+          type: integer
+          readOnly: true
+        department_name:
+          type: string
+          readOnly: true
+        student_limit:
+          type: integer
+          readOnly: true
+        is_norm_controller:
+          type: boolean
+          readOnly: true
+      required:
+      - contacts
+      - department_id
+      - department_name
+      - email
+      - first_name
+      - full_name
+      - id
+      - is_norm_controller
+      - is_staff
+      - is_superuser
+      - last_name
+      - middle_name
+      - role
+      - student_limit
+      - username
+    UserDetailResponse:
+      oneOf:
+      - $ref: '#/components/schemas/StudentDetail'
+      - $ref: '#/components/schemas/TeacherDetail'
+      discriminator:
+        propertyName: role
+        mapping:
+          StudentDetail: '#/components/schemas/StudentDetail'
+          TeacherDetail: '#/components/schemas/TeacherDetail'
+    UserResponse:
+      oneOf:
+      - $ref: '#/components/schemas/Student'
+      - $ref: '#/components/schemas/Teacher'
+      discriminator:
+        propertyName: role
+        mapping:
+          Student: '#/components/schemas/Student'
+          Teacher: '#/components/schemas/Teacher'
+    WorkDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        topic:
+          type: string
+          title: Тема работы
+          maxLength: 255
+        student_full_name:
+          type: string
+          readOnly: true
+        supervisor_full_name:
+          type: string
+          readOnly: true
+        department_name:
+          type: string
+          readOnly: true
+        work_type_name:
+          type: string
+          readOnly: true
+        norm_control_status:
+          allOf:
+          - $ref: '#/components/schemas/NormControlStatusEnum'
+          title: Статус нормоконтроля
+        has_document:
+          type: string
+          readOnly: true
+        student_id:
+          type: integer
+          readOnly: true
+        supervisor_id:
+          type: integer
+          readOnly: true
+        department_id:
+          type: integer
+          readOnly: true
+        work_type_id:
+          type: integer
+          readOnly: true
+        document_original_name:
+          type: string
+          readOnly: true
+        download_url:
+          type: string
+          readOnly: true
+      required:
+      - department_id
+      - department_name
+      - document_original_name
+      - download_url
+      - has_document
+      - id
+      - student_full_name
+      - student_id
+      - supervisor_full_name
+      - supervisor_id
+      - topic
+      - work_type_id
+      - work_type_name
+    WorkDocument:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        topic:
+          type: string
+          title: Тема работы
+          maxLength: 255
+        document_original_name:
+          type: string
+          title: Оригинальное имя файла
+          maxLength: 255
+        has_document:
+          type: string
+          readOnly: true
+        download_url:
+          type: string
+          readOnly: true
+      required:
+      - download_url
+      - has_document
+      - id
+      - topic
+    WorkDocumentUpload:
+      type: object
+      properties:
+        document:
+          type: string
+          format: uri
+      required:
+      - document
+    WorkShort:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        topic:
+          type: string
+          title: Тема работы
+          maxLength: 255
+        student_full_name:
+          type: string
+          readOnly: true
+        supervisor_full_name:
+          type: string
+          readOnly: true
+        department_name:
+          type: string
+          readOnly: true
+        work_type_name:
+          type: string
+          readOnly: true
+        norm_control_status:
+          allOf:
+          - $ref: '#/components/schemas/NormControlStatusEnum'
+          title: Статус нормоконтроля
+        has_document:
+          type: string
+          readOnly: true
+      required:
+      - department_name
+      - has_document
+      - id
+      - student_full_name
+      - supervisor_full_name
+      - topic
+      - work_type_name
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

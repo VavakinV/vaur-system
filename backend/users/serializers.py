@@ -229,11 +229,13 @@ class TeacherMePatchSerializer(BaseMePatchSerializer):
 
 
 class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
-    group_number = serializers.CharField(source='group.number', read_only=True)
+    id = serializers.IntegerField(source='user.id', read_only=True)
+    group_number = serializers.CharField(source='group_number.number', read_only=True)
 
     class Meta:
         model = Student
         fields = (
+            'id',
             'full_name',
             'group_id',
             'group_number',
@@ -261,11 +263,13 @@ class StudentDetailSerializer(UserDetailFieldsMixin, StudentSerializer):
 
 
 class TeacherSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
+    id = serializers.IntegerField(source='user.id', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
 
     class Meta:
         model = Teacher
         fields = (
+            'id',
             'full_name',
             'department_id',
             'department_name',
