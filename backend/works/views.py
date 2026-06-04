@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -8,6 +9,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from users.models import User
 from works.models import Work
 from works.serializers import (
     WorkDetailSerializer,
@@ -136,3 +138,27 @@ class WorkDocumentView(WorkBaseView):
         response = FileResponse(work.document.open('rb'), as_attachment=True, filename=filename)
         response['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         return response
+
+
+class UserWorksView(APIView):
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='user_works_list',
+        description='Return all works associated with a user by their user id.',
+        responses={
+            200: WorkShortSerializer(many=True),
+            401: OpenApiResponse(description='Authentication required'),
+            404: OpenApiResponse(description='User not found'),
+        },
+    )
+    def get(self, request, user_pk):
+        user = get_object_or_404(User, pk=user_pk)
+
+        if user.role == User.Role.STUDENT:
+            works = Work.objects.filter(student__user_id=user_pk)
+        else:
+            works = Work.objects.filter(supervisor__user_id=user_pk)
+
+        works = works.select_related('student__user', 'supervisor__user', 'department', 'work_type')
+        serializer = WorkShortSerializer(works, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
