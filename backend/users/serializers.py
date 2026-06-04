@@ -202,30 +202,16 @@ class TeacherMeSerializer(BaseMeSerializer):
         )
 
 
-class BaseMePatchSerializer(serializers.ModelSerializer):
+class MePatchSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = (
-            'email',
-            'last_name',
-            'first_name',
-            'middle_name',
-            'contacts',
-        )
+        fields = ('email', 'last_name', 'first_name', 'middle_name', 'contacts')
 
     def validate_email(self, value):
         user = self.instance
         if User.objects.exclude(pk=user.pk).filter(email__iexact=value).exists():
             raise serializers.ValidationError('User with this email already exists.')
         return value
-
-
-class StudentMePatchSerializer(BaseMePatchSerializer):
-    pass
-
-
-class TeacherMePatchSerializer(BaseMePatchSerializer):
-    pass
 
 
 class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
@@ -237,20 +223,17 @@ class StudentSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
         fields = (
             'id',
             'full_name',
-            'group_id',
+            'group_number_id',
             'group_number',
         )
 
 
-class UserDetailFieldsMixin(serializers.Serializer):
+class StudentDetailSerializer(StudentSerializer):
     email = serializers.EmailField(source='user.email', read_only=True)
     last_name = serializers.CharField(source='user.last_name', read_only=True)
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     middle_name = serializers.CharField(source='user.middle_name', read_only=True)
     contacts = serializers.CharField(source='user.contacts', read_only=True)
-
-
-class StudentDetailSerializer(UserDetailFieldsMixin, StudentSerializer):
 
     class Meta(StudentSerializer.Meta):
         fields = StudentSerializer.Meta.fields + (
@@ -277,7 +260,12 @@ class TeacherSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
         )
 
 
-class TeacherDetailSerializer(UserDetailFieldsMixin, TeacherSerializer):
+class TeacherDetailSerializer(TeacherSerializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+    last_name = serializers.CharField(source='user.last_name', read_only=True)
+    first_name = serializers.CharField(source='user.first_name', read_only=True)
+    middle_name = serializers.CharField(source='user.middle_name', read_only=True)
+    contacts = serializers.CharField(source='user.contacts', read_only=True)
 
     class Meta(TeacherSerializer.Meta):
         fields = TeacherSerializer.Meta.fields + (

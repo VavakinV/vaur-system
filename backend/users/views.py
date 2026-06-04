@@ -11,23 +11,21 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from users.serializers import (
     AccessTokenSerializer,
     AuthTokensSerializer,
-    BaseMeSerializer,
     EmailOrUsernameTokenObtainPairSerializer,
+    GroupSerializer,
     LoginSerializer,
     LogoutSerializer,
+    MePatchSerializer,
     MessageSerializer,
     RefreshTokenSerializer,
     RegisterResponseSerializer,
     RegisterSerializer,
-    GroupSerializer,
-    StudentMePatchSerializer,
-    StudentMeSerializer,
-    TeacherDetailSerializer,
-    TeacherMePatchSerializer,
-    TeacherMeSerializer,
     StudentDetailSerializer,
-    TeacherSerializer,
+    StudentMeSerializer,
     StudentSerializer,
+    TeacherDetailSerializer,
+    TeacherMeSerializer,
+    TeacherSerializer,
 )
 
 from django.shortcuts import get_object_or_404
@@ -42,11 +40,6 @@ GROUPS_TAG = ['Groups']
 ME_READ_SERIALIZERS = {
     User.Role.STUDENT: StudentMeSerializer,
     User.Role.TEACHER: TeacherMeSerializer,
-}
-
-ME_WRITE_SERIALIZERS = {
-    User.Role.STUDENT: StudentMePatchSerializer,
-    User.Role.TEACHER: TeacherMePatchSerializer,
 }
 
 USER_DETAIL_SERIALIZERS = {
@@ -149,9 +142,6 @@ class MeView(APIView):
     def get_read_serializer_class(self, user):
         return ME_READ_SERIALIZERS[user.role]
 
-    def get_write_serializer_class(self, user):
-        return ME_WRITE_SERIALIZERS[user.role]
-
     @extend_schema(
         tags=USERS_TAG,
         operation_id='users_me',
@@ -173,11 +163,7 @@ class MeView(APIView):
         tags=USERS_TAG,
         operation_id='users_me_patch',
         description='Patch current user fields.',
-        request=PolymorphicProxySerializer(
-            component_name='MePatchRequest',
-            serializers=[StudentMePatchSerializer, TeacherMePatchSerializer],
-            resource_type_field_name=None,
-        ),
+        request=MePatchSerializer,
         responses={
             200: PolymorphicProxySerializer(
                 component_name='MePatchResponse',
@@ -188,16 +174,10 @@ class MeView(APIView):
         },
     )
     def patch(self, request):
-        serializer_class = self.get_write_serializer_class(request.user)
-        serializer = serializer_class(
-            request.user,
-            data=request.data,
-            partial=True,
-        )
+        serializer = MePatchSerializer(request.user, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
-        response_serializer_class = self.get_read_serializer_class(request.user)
-        return Response(response_serializer_class(request.user).data, status=status.HTTP_200_OK)
+        return Response(self.get_read_serializer_class(request.user)(request.user).data, status=status.HTTP_200_OK)
 
 
 class UserDetailView(APIView):
