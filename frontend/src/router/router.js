@@ -2,8 +2,11 @@ import {createRouter, createWebHistory} from 'vue-router'
 import store from '@/store'
 
 import Login from '@/views/LoginView'
+import Register from '@/views/RegisterView'
 import Works from '@/views/WorksView'
 import Forbidden from '@/views/ForbiddenView'
+import Profile from '@/views/ProfileView.vue'
+import Work from '@/views/WorkIdView.vue'
 
 const routes = [
     {
@@ -19,6 +22,14 @@ const routes = [
         }
     },
     {
+        path: '/register',
+        name: 'register',
+        component: Register,
+        meta: {
+            showNavbar: false
+        }
+    },
+    {
         path: '/works',
         name: 'works',
         component: Works,
@@ -26,6 +37,26 @@ const routes = [
             requiresAuth: true,
             roles: ["admin", "student", "teacher"]
         }
+    },
+    {
+        path: '/profile/:id',
+        name: 'profile',
+        component: Profile,
+        props: true,
+        meta: {
+            requiresAuth: true,
+            roles: ["admin", "student", "teacher"]
+        },
+        meta: {
+            requiresAuth: true,
+            roles: ["admin", "student", "teacher"]
+        }
+    },
+    {
+        path: '/work/:id',
+        name: 'workDetail',
+        component: Work,
+        props: true
     },
     {
         path: '/forbidden',

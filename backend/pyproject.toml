@@ -8,6 +8,7 @@ authors = [
 requires-python = ">=3.12"
 dependencies = [
     "django (==5.1.15)",
+    "django-cors-headers (==4.9.0)",
     "djangorestframework (==3.16.1)",
     "drf-spectacular (==0.29.0)",
     "psycopg[binary] (==3.2.12)",
@@ -19,6 +20,7 @@ dependencies = [
 [tool.poetry]
 packages = [
     { include = "vaur" },
+    { include = "notifications" },
     { include = "users" },
     { include = "works" }
 ]

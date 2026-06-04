@@ -30,9 +30,8 @@
         <button class="auth-form__button" type="submit">
             Войти
         </button>
-        <!-- TODO: добавить переход к форме регистрации -->
         <p class="auth-form__footer">Нет аккаунта?</p>
-        <p class="auth-form__link-to-register" @click="$router.push('/')">Зарегистрироваться</p>
+        <p class="auth-form__link-to-register" @click="$router.push('/register')">Зарегистрироваться</p>
     </form>
 </template>
 

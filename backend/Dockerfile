@@ -12,6 +12,7 @@ RUN apt-get update \
 COPY pyproject.toml poetry.lock ./
 COPY manage.py ./manage.py
 COPY vaur ./vaur
+COPY notifications ./notifications
 COPY users ./users
 COPY works ./works
 COPY entrypoint.sh ./entrypoint.sh
@@ -34,6 +35,7 @@ RUN apt-get update \
 COPY --from=builder /install /usr/local
 COPY manage.py ./manage.py
 COPY vaur ./vaur
+COPY notifications ./notifications
 COPY users ./users
 COPY works ./works
 COPY entrypoint.sh ./entrypoint.sh

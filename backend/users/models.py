@@ -26,7 +26,7 @@ class User(AbstractUser):
     last_name = models.CharField(max_length=50, verbose_name='Фамилия')
     first_name = models.CharField(max_length=50, verbose_name='Имя')
     middle_name = models.CharField(max_length=50, blank=True, null=True, verbose_name='Отчество')
-    contacts = models.CharField(max_length=100, blank=True, null=True, verbose_name='Контакты')
+    contacts = models.CharField(max_length=300, blank=True, null=True, verbose_name='Контакты')
     role = models.CharField(max_length=20, choices=Role.choices, verbose_name='Роль')
     dt_created = models.DateTimeField(auto_now_add=True)
 
