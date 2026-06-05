@@ -10,12 +10,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
-from works.models import Work
+from works.models import Work, WorkRequest, WorkType
 from works.serializers import (
     WorkDetailSerializer,
     WorkDocumentSerializer,
     WorkDocumentUploadSerializer,
+    WorkRequestCreateSerializer,
+    WorkRequestSerializer,
     WorkShortSerializer,
+    WorkTypeSerializer,
 )
 
 
@@ -138,6 +141,118 @@ class WorkDocumentView(WorkBaseView):
         response = FileResponse(work.document.open('rb'), as_attachment=True, filename=filename)
         response['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         return response
+
+
+class WorkTypeListView(APIView):
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='work_type_list',
+        description='Return a list of all work types.',
+        responses={200: WorkTypeSerializer(many=True)},
+    )
+    def get(self, request):
+        work_types = WorkType.objects.all()
+        return Response(WorkTypeSerializer(work_types, many=True).data)
+
+
+class WorkRequestCreateView(APIView):
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='work_request_create',
+        description='Create a work request. Only students can create requests.',
+        request=WorkRequestCreateSerializer,
+        responses={
+            201: WorkRequestSerializer,
+            403: OpenApiResponse(description='Only students can create work requests'),
+        },
+    )
+    def post(self, request):
+        if not request.user.is_student:
+            raise PermissionDenied('Only students can create work requests.')
+
+        serializer = WorkRequestCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        work_request = serializer.save(student=request.user.student_profile)
+        return Response(WorkRequestSerializer(work_request).data, status=status.HTTP_201_CREATED)
+
+
+class WorkRequestRespondBaseView(APIView):
+    respond_status = None
+
+    def post(self, request, pk):
+        if not request.user.is_teacher:
+            raise PermissionDenied('Only teachers can respond to work requests.')
+
+        work_request = get_object_or_404(
+            WorkRequest.objects.select_related('teacher__user', 'type'),
+            pk=pk,
+            teacher__user=request.user,
+        )
+
+        if work_request.status != WorkRequest.Status.PENDING:
+            return Response(
+                {'detail': 'Only pending requests can be accepted or rejected.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        work_request.status = self.respond_status
+        work_request.save(update_fields=['status'])
+        return Response(WorkRequestSerializer(work_request).data)
+
+
+class WorkRequestAcceptView(WorkRequestRespondBaseView):
+    respond_status = WorkRequest.Status.ACCEPTED
+
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='work_request_accept',
+        description='Accept a work request. Only the teacher the request is addressed to can accept it.',
+        request=None,
+        responses={
+            200: WorkRequestSerializer,
+            400: OpenApiResponse(description='Request is not pending'),
+            403: OpenApiResponse(description='Permission denied'),
+            404: OpenApiResponse(description='Work request not found'),
+        },
+    )
+    def post(self, request, pk):
+        return super().post(request, pk)
+
+
+class WorkRequestRejectView(WorkRequestRespondBaseView):
+    respond_status = WorkRequest.Status.REJECTED
+
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='work_request_reject',
+        description='Reject a work request. Only the teacher the request is addressed to can reject it.',
+        request=None,
+        responses={
+            200: WorkRequestSerializer,
+            400: OpenApiResponse(description='Request is not pending'),
+            403: OpenApiResponse(description='Permission denied'),
+            404: OpenApiResponse(description='Work request not found'),
+        },
+    )
+    def post(self, request, pk):
+        return super().post(request, pk)
+
+
+class MyWorkRequestsView(APIView):
+    @extend_schema(
+        tags=WORKS_TAG,
+        operation_id='my_work_requests_list',
+        description='Return all work requests of the current user.',
+        responses={200: WorkRequestSerializer(many=True)},
+    )
+    def get(self, request):
+        if request.user.is_student:
+            requests_qs = WorkRequest.objects.filter(student__user=request.user)
+        else:
+            requests_qs = WorkRequest.objects.filter(teacher__user=request.user)
+
+        requests_qs = requests_qs.select_related('teacher__user', 'type')
+        return Response(WorkRequestSerializer(requests_qs, many=True).data)
 
 
 class UserWorksView(APIView):
