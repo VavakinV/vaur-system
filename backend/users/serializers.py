@@ -5,7 +5,7 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from users.mixins import FullNameSerializerMixin
-from users.models import Group, Student, Teacher
+from users.models import Department, Group, Student, Teacher
 
 
 User = get_user_model()
@@ -232,6 +232,7 @@ class StudentDetailSerializer(StudentSerializer):
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     middle_name = serializers.CharField(source='user.middle_name', read_only=True)
     contacts = serializers.CharField(source='user.contacts', read_only=True)
+    role = serializers.CharField(source='user.role', read_only=True)
 
     class Meta(StudentSerializer.Meta):
         fields = StudentSerializer.Meta.fields + (
@@ -240,6 +241,7 @@ class StudentDetailSerializer(StudentSerializer):
             'first_name',
             'middle_name',
             'contacts',
+            'role',
         )
 
 
@@ -262,6 +264,7 @@ class TeacherDetailSerializer(TeacherSerializer):
     first_name = serializers.CharField(source='user.first_name', read_only=True)
     middle_name = serializers.CharField(source='user.middle_name', read_only=True)
     contacts = serializers.CharField(source='user.contacts', read_only=True)
+    role = serializers.CharField(source='user.role', read_only=True)
 
     class Meta(TeacherSerializer.Meta):
         fields = TeacherSerializer.Meta.fields + (
@@ -270,6 +273,7 @@ class TeacherDetailSerializer(TeacherSerializer):
             'first_name',
             'middle_name',
             'contacts',
+            'role',
         )
 
 
@@ -277,3 +281,15 @@ class GroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = Group
         fields = '__all__'
+
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = ('id', 'name')
+
+
+class TeacherAvailableSerializer(FullNameSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = Teacher
+        fields = ('id', 'full_name', 'student_limit')

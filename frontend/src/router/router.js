@@ -7,6 +7,8 @@ import Works from '@/views/WorksView'
 import Forbidden from '@/views/ForbiddenView'
 import Profile from '@/views/ProfileView.vue'
 import Work from '@/views/WorkIdView.vue'
+import Applications from '@/views/ApplicationsView.vue'
+import ApplicationDetail from '@/views/ApplicationDetailView.vue'
 
 const routes = [
     {
@@ -57,6 +59,25 @@ const routes = [
         name: 'workDetail',
         component: Work,
         props: true
+    },
+    {
+        path: '/applications',
+        name: 'applications',
+        component: Applications,
+        meta: {
+            requiresAuth: true,
+            roles: ["student", "teacher"]
+        }
+    },
+    {
+        path: '/applications/:id',
+        name: 'applicationDetail',
+        component: ApplicationDetail,
+        props: true,
+        meta: {
+            requiresAuth: true,
+            roles: ["student", "teacher"]
+        }
     },
     {
         path: '/forbidden',

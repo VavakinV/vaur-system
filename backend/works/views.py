@@ -8,12 +8,19 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from works.models import Work
+from works.models import Work, WorkRequest, WorkType
 from works.serializers import (
     WorkDetailSerializer,
     WorkDocumentSerializer,
     WorkDocumentUploadSerializer,
+    WorkRequestCreateSerializer,
+    WorkRequestDetailSerializer,
+    WorkRequestStudentSerializer,
+    WorkRequestStudentUpdateSerializer,
+    WorkRequestTeacherSerializer,
+    WorkRequestUpdateSerializer,
     WorkShortSerializer,
+    WorkTypeSerializer,
 )
 
 
@@ -136,3 +143,96 @@ class WorkDocumentView(WorkBaseView):
         response = FileResponse(work.document.open('rb'), as_attachment=True, filename=filename)
         response['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         return response
+
+
+class WorkTypeListView(APIView):
+    def get(self, request):
+        types = WorkType.objects.all()
+        return Response(WorkTypeSerializer(types, many=True).data)
+
+
+class WorkRequestListCreateView(APIView):
+    def get(self, request):
+        user = request.user
+        if user.role == 'student':
+            student = user.student_profile
+            requests = WorkRequest.objects.filter(student=student).select_related(
+                'type', 'teacher__user',
+            )
+            return Response(WorkRequestStudentSerializer(requests, many=True).data)
+        if user.role == 'teacher':
+            teacher = user.teacher_profile
+            requests = WorkRequest.objects.filter(teacher=teacher).select_related(
+                'type', 'student__user', 'student__group_number',
+            )
+            return Response(WorkRequestTeacherSerializer(requests, many=True).data)
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+    def post(self, request):
+        user = request.user
+        if user.role != 'student':
+            return Response({'detail': 'Только студенты могут подавать заявки.'}, status=status.HTTP_403_FORBIDDEN)
+        student = user.student_profile
+        serializer = WorkRequestCreateSerializer(data=request.data, context={'student': student})
+        serializer.is_valid(raise_exception=True)
+        work_request = serializer.save()
+        return Response(
+            WorkRequestStudentSerializer(work_request).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+_REQUEST_DETAIL_SELECT = (
+    'type', 'teacher__user', 'teacher__department',
+    'student__user', 'student__group_number',
+)
+
+
+class WorkRequestUpdateView(APIView):
+    def get(self, request, pk):
+        user = request.user
+        student = getattr(user, 'student_profile', None)
+        teacher = getattr(user, 'teacher_profile', None)
+        try:
+            if student:
+                work_request = WorkRequest.objects.select_related(
+                    *_REQUEST_DETAIL_SELECT
+                ).get(pk=pk, student=student)
+            elif teacher:
+                work_request = WorkRequest.objects.select_related(
+                    *_REQUEST_DETAIL_SELECT
+                ).get(pk=pk, teacher=teacher)
+            else:
+                return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        except WorkRequest.DoesNotExist:
+            return Response({'detail': 'Заявка не найдена.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(WorkRequestDetailSerializer(work_request).data)
+
+    def patch(self, request, pk):
+        user = request.user
+
+        if user.role == 'teacher':
+            teacher = user.teacher_profile
+            try:
+                work_request = WorkRequest.objects.select_related(
+                    'type', 'student__user', 'student__group_number',
+                ).get(pk=pk, teacher=teacher)
+            except WorkRequest.DoesNotExist:
+                return Response({'detail': 'Заявка не найдена.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = WorkRequestUpdateSerializer(work_request, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            return Response(WorkRequestTeacherSerializer(serializer.save()).data)
+
+        if user.role == 'student':
+            student = user.student_profile
+            try:
+                work_request = WorkRequest.objects.select_related(
+                    'type', 'teacher__user',
+                ).get(pk=pk, student=student)
+            except WorkRequest.DoesNotExist:
+                return Response({'detail': 'Заявка не найдена.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = WorkRequestStudentUpdateSerializer(work_request, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            return Response(WorkRequestStudentSerializer(serializer.save()).data)
+
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
