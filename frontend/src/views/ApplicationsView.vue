@@ -161,14 +161,14 @@
         <h2 class="modal-title">Изменить статус заявки</h2>
         <p class="modal-desc">Тема: <strong>{{ selectedRequest?.topic }}</strong></p>
         <p v-if="statusError" class="error-text">{{ statusError }}</p>
-        <div class="modal-actions">
-          <button class="btn-cancel" @click="closeStatusModal">Отмена</button>
-          <custom-button class="btn-reject" @click="changeStatus('rejected')" :disabled="statusUpdating">
+        <div class="modal-actions modal-actions--status">
+          <custom-button class="btn-reject btn-status-action" @click="changeStatus('rejected')" :disabled="statusUpdating">
             Отклонить
           </custom-button>
-          <custom-button @click="changeStatus('accepted')" :disabled="statusUpdating">
+          <custom-button class="btn-status-action" @click="changeStatus('accepted')" :disabled="statusUpdating">
             Одобрить
           </custom-button>
+          <button class="btn-cancel btn-status-cancel" @click="closeStatusModal">Отмена</button>
         </div>
       </div>
     </div>
@@ -557,23 +557,46 @@ export default {
 .modal-actions {
   display: flex;
   gap: 10px;
+  align-items: center;
   justify-content: flex-end;
   margin-top: 6px;
 }
 
+.modal-actions .btn-cancel {
+  margin-right: auto;
+}
+
+.modal-actions--status {
+  flex-wrap: wrap;
+}
+
+.btn-status-action {
+  flex: 1;
+}
+
+.btn-status-cancel {
+  flex-basis: 100%;
+  margin-right: 0;
+  margin-left: auto;
+  width: fit-content;
+}
+
 .btn-cancel {
-  padding: 9px 20px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+  padding: 10px 20px;
+  border: 1px solid #c5c5c5;
+  border-radius: 8px;
   background: white;
   cursor: pointer;
-  font-size: 0.95rem;
+  font-size: 16px;
+  font-weight: 400;
   color: #555;
-  transition: background 0.2s;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
 }
 
 .btn-cancel:hover {
   background: #f5f5f5;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .btn-reject {
