@@ -30,7 +30,7 @@
         <div class="field-label">Научный руководитель</div>
         <div class="field-value">
           <router-link :to="{ name: 'profile', params: { id: request.teacher_user_id } }">
-            {{ request.teacher_name }}, каф. {{ request.teacher_department_name }}
+            {{ request.teacher_name }}, {{ request.teacher_department_name }}
           </router-link>
         </div>
       </div>

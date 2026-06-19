@@ -25,6 +25,7 @@ from works.serializers import (
 )
 
 
+
 WORKS_TAG = ['Works']
 
 
@@ -50,6 +51,7 @@ def get_accessible_work(pk, user, denied_message):
     try:
         work = Work.objects.select_related(
             'student__user',
+            'student__group_number',
             'supervisor__user',
             'department',
             'work_type',
@@ -144,6 +146,22 @@ class WorkDocumentView(WorkBaseView):
         response = FileResponse(work.document.open('rb'), as_attachment=True, filename=filename)
         response['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         return response
+
+
+class WorkListView(APIView):
+    def get(self, request):
+        user = request.user
+        qs = Work.objects.select_related(
+            'student__user', 'student__group_number',
+            'supervisor__user', 'department', 'work_type',
+        )
+        if user.role == 'student':
+            works = qs.filter(student=user.student_profile)
+        elif user.role == 'teacher':
+            works = qs.filter(supervisor=user.teacher_profile)
+        else:
+            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        return Response(WorkShortSerializer(works, many=True).data)
 
 
 class WorkTypeListView(APIView):

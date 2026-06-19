@@ -3,6 +3,7 @@ from django.urls import path
 from works.views import (
     WorkDetailView,
     WorkDocumentView,
+    WorkListView,
     WorkRequestListCreateView,
     WorkRequestUpdateView,
     WorkShortView,
@@ -11,6 +12,7 @@ from works.views import (
 
 
 urlpatterns = [
+    path('', WorkListView.as_view(), name='work-list'),
     path('types/', WorkTypeListView.as_view(), name='work-types'),
     path('requests/', WorkRequestListCreateView.as_view(), name='work-requests'),
     path('requests/<int:pk>/', WorkRequestUpdateView.as_view(), name='work-request-detail'),

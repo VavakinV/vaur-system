@@ -1,7 +1,7 @@
 <template>
   <div class="work-container">
     <div v-if="loading" class="status-msg">Загрузка данных...</div>
-    
+
     <div v-else-if="work" class="work-card">
       <h1 class="work-topic">{{ work.topic }}</h1>
 
@@ -12,39 +12,33 @@
         </div>
 
         <div class="info-item">
-          <label>АВТОР РАБОТЫ</label>
-          <router-link 
-            v-if="work.student_id" 
-            :to="`/profile/${work.student_id}`" 
+          <label>АВТОР</label>
+          <router-link
+            :to="{ name: 'profile', params: { id: work.student_user_id } }"
             class="profile-link"
           >
-            {{ work.student_full_name }}
+            {{ work.student_full_name }}, группа {{ work.student_group }}
           </router-link>
-          <span v-else>{{ work.student_full_name }}</span>
         </div>
 
         <div class="info-item">
           <label>НАУЧНЫЙ РУКОВОДИТЕЛЬ</label>
-          <router-link 
-            v-if="work.supervisor_id" 
-            :to="`/profile/${work.supervisor_id}`" 
+          <router-link
+            :to="{ name: 'profile', params: { id: work.supervisor_user_id } }"
             class="profile-link"
           >
-            {{ work.supervisor_full_name }}
+            {{ work.supervisor_full_name }}, {{ work.department_name }}
           </router-link>
-          <span v-else>{{ work.supervisor_full_name }}</span>
         </div>
 
         <div class="info-item">
           <label>СТАТУС РАБОТЫ</label>
-          <span class="status-mock">В процессе (уточняется)</span>
+          <span :class="['status-work', work.status]">{{ translateStatus(work.status) }}</span>
         </div>
 
         <div class="info-item">
           <label>СТАТУС НОРМОКОНТРОЛЯ</label>
-          <span :class="['status-tag', work.norm_control_status]">
-            {{ translateNormStatus(work.norm_control_status) }}
-          </span>
+          <span :class="['status-norm', work.norm_control_status]">{{ translateNormStatus(work.norm_control_status) }}</span>
         </div>
       </div>
 
@@ -53,22 +47,24 @@
       <div class="file-section">
         <div class="info-item">
           <label>ФАЙЛ РАБОТЫ</label>
-          <p v-if="work.has_document" class="file-link">
-            Документ загружен
-          </p>
-          <p v-else class="file-none">Файл не загружен</p>
+          <a
+            v-if="work.has_document"
+            class="file-link"
+            href="#"
+            @click.prevent="download"
+          >{{ work.document_original_name || 'document.docx' }}</a>
+          <span v-else class="file-none">Файл не загружен</span>
         </div>
 
-        <input 
-          type="file" 
-          ref="fileInput" 
-          style="display: none" 
+        <input
+          type="file"
+          ref="fileInput"
+          accept=".docx"
+          style="display: none"
           @change="handleFileChange"
         />
-        
-        <custom-button @click="$refs.fileInput.click()">
-          Обновить файл
-        </custom-button>
+
+        <custom-button @click="$refs.fileInput.click()">Обновить файл</custom-button>
       </div>
     </div>
 
@@ -79,12 +75,28 @@
 <script>
 import workApi from "@/api/work";
 
+const STATUS_LABELS = {
+  done: 'Сдана',
+  not_sent: 'Не отправлена',
+  in_progress: 'В работе',
+  student_edit: 'Правки от студента',
+  supervisor_edit: 'Правки от руководителя',
+  normcontroller_edit: 'Правки от нормоконтролера',
+};
+
+const NORM_STATUS_LABELS = {
+  passed: 'Пройден',
+  needs_changes: 'Есть исправления',
+  pending: 'В ожидании',
+  not_sent: 'Не отправлена',
+};
+
 export default {
   props: ['id'],
   data() {
     return {
       work: null,
-      loading: true
+      loading: true,
     };
   },
   methods: {
@@ -92,12 +104,8 @@ export default {
       this.loading = true;
       try {
         this.work = await workApi.getWorkById(this.id);
-
-        // МОКОВЫЕ ДАННЫЕ, ДОБАВИТЬ НА БЭКЕ
-        // this.work.student_id = 2; 
-        // this.work.supervisor_id = 1;
       } catch (e) {
-        console.error("Ошибка загрузки работы", e);
+        console.error('Ошибка загрузки работы', e);
       } finally {
         this.loading = false;
       }
@@ -105,30 +113,30 @@ export default {
     async handleFileChange(event) {
       const file = event.target.files[0];
       if (!file) return;
-
       try {
         await workApi.uploadDocument(this.id, file);
-        alert("Файл успешно обновлен");
-        this.fetchWorkData();
+        await this.fetchWorkData();
       } catch (e) {
-        alert("Ошибка при загрузке файла");
+        alert('Ошибка при загрузке файла');
       }
     },
-    translateNormStatus(status) {
-      const statuses = {
-        passed: "Пройден",
-        failed: "Не пройден",
-        pending: "На проверке"
-      };
-      return statuses[status] || "Неизвестно";
-    }
+    async download() {
+      try {
+        await workApi.downloadDocument(this.id, this.work.document_original_name);
+      } catch (e) {
+        alert('Ошибка при скачивании файла');
+      }
+    },
+    translateStatus(s) {
+      return STATUS_LABELS[s] || s;
+    },
+    translateNormStatus(s) {
+      return NORM_STATUS_LABELS[s] || s;
+    },
   },
   watch: {
-    id: {
-      immediate: true,
-      handler: 'fetchWorkData'
-    }
-  }
+    id: { immediate: true, handler: 'fetchWorkData' },
+  },
 };
 </script>
 
@@ -139,6 +147,7 @@ export default {
   padding: 40px 20px;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
 }
 
 .work-card {
@@ -148,21 +157,20 @@ export default {
   padding: 40px;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  text-align: left;
 }
 
 .work-topic {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: bold;
   color: #011f4b;
-  margin-bottom: 30px;
-  line-height: 1.2;
+  margin: 0 0 30px;
+  line-height: 1.3;
 }
 
 .info-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 }
 
 .info-item {
@@ -172,33 +180,53 @@ export default {
 }
 
 .info-item label {
-  font-size: 14px;
-  color: #666666;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #999;
 }
 
-.info-item span, .info-item p {
-  font-size: 18px;
-  color: #000000;
+.info-item span,
+.info-item p {
+  font-size: 16px;
+  color: #222;
   margin: 0;
 }
 
 .profile-link {
-  font-size: 18px;
-  color: #005B96 !important;
+  font-size: 16px;
+  color: #005b96;
   text-decoration: underline;
-  cursor: pointer;
   width: fit-content;
 }
 
 .profile-link:hover {
-  color: #011f4b !important;
+  color: #011f4b;
 }
+
+.status-work,
+.status-norm {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.status-work.done               { color: #2e7d32; }
+.status-work.not_sent           { color: #757575; }
+.status-work.in_progress        { color: #ef6c00; }
+.status-work.student_edit       { color: #ef6c00; }
+.status-work.supervisor_edit    { color: #ef6c00; }
+.status-work.normcontroller_edit { color: #c62828; }
+
+.status-norm.passed        { color: #2e7d32; }
+.status-norm.needs_changes { color: #c62828; }
+.status-norm.pending       { color: #ef6c00; }
+.status-norm.not_sent      { color: #757575; }
 
 .file-divider {
   border: 0;
-  border-top: 1px solid #EEEEEE;
-  margin: 24px 0;
+  border-top: 1px solid #eee;
+  margin: 28px 0;
 }
 
 .file-section {
@@ -207,11 +235,26 @@ export default {
   gap: 16px;
 }
 
-.status-tag.passed { color: #2e7d32; font-weight: 600; }
-.status-tag.failed { color: #d32f2f; font-weight: 600; }
+.file-link {
+  font-size: 16px;
+  color: #005b96;
+  text-decoration: underline;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.file-link:hover {
+  color: #011f4b;
+}
+
+.file-none {
+  color: #999;
+  font-style: italic;
+}
 
 .status-msg {
   padding: 40px;
   color: #666;
+  font-size: 16px;
 }
 </style>

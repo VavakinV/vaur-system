@@ -10,6 +10,7 @@ class WorkShortSerializer(serializers.ModelSerializer):
     supervisor_full_name = serializers.CharField(source='supervisor.user', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
     work_type_name = serializers.CharField(source='work_type.name', read_only=True)
+    student_group = serializers.CharField(source='student.group_number.number', read_only=True)
     has_document = serializers.SerializerMethodField()
 
     class Meta:
@@ -21,6 +22,8 @@ class WorkShortSerializer(serializers.ModelSerializer):
             'supervisor_full_name',
             'department_name',
             'work_type_name',
+            'student_group',
+            'status',
             'norm_control_status',
             'has_document',
         )
@@ -31,7 +34,9 @@ class WorkShortSerializer(serializers.ModelSerializer):
 
 class WorkDetailSerializer(WorkShortSerializer):
     student_id = serializers.IntegerField(read_only=True)
+    student_user_id = serializers.IntegerField(source='student.user.id', read_only=True)
     supervisor_id = serializers.IntegerField(read_only=True)
+    supervisor_user_id = serializers.IntegerField(source='supervisor.user.id', read_only=True)
     department_id = serializers.IntegerField(read_only=True)
     work_type_id = serializers.IntegerField(read_only=True)
     document_original_name = serializers.CharField(read_only=True)
@@ -40,7 +45,9 @@ class WorkDetailSerializer(WorkShortSerializer):
     class Meta(WorkShortSerializer.Meta):
         fields = WorkShortSerializer.Meta.fields + (
             'student_id',
+            'student_user_id',
             'supervisor_id',
+            'supervisor_user_id',
             'department_id',
             'work_type_id',
             'document_original_name',

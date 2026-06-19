@@ -32,7 +32,6 @@ from users.serializers import (
 
 from users.models import Department, Teacher, User, Group
 
-
 AUTH_TAG = ['Auth']
 USERS_TAG = ['Users']
 GROUPS_TAG = ['Groups']
