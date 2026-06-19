@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied

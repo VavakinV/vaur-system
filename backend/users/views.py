@@ -218,7 +218,7 @@ class UserView(APIView):
         },
     )
     def get(self, request, pk):
-        user = User.objects.get(pk=pk)
+        user = get_object_or_404(User, pk=pk)
         profile = user.student_profile if user.role == User.Role.STUDENT else user.teacher_profile
         serializer = USER_SERIALIZERS[user.role](profile)
         return Response(serializer.data, status=status.HTTP_200_OK)

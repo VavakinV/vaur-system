@@ -86,6 +86,36 @@ class WorkDocumentSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(f'/works/{obj.pk}/document/')
 
 
+class WorkTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkType
+        fields = ('id', 'name')
+
+
+class WorkRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('teacher', 'type', 'topic')
+
+
+class WorkRequestSerializer(serializers.ModelSerializer):
+    teacher_full_name = serializers.CharField(source='teacher.user', read_only=True)
+    work_type_name = serializers.CharField(source='type.name', read_only=True)
+
+    class Meta:
+        model = WorkRequest
+        fields = (
+            'id',
+            'teacher_id',
+            'teacher_full_name',
+            'type_id',
+            'work_type_name',
+            'topic',
+            'status',
+            'created_at',
+        )
+
+
 class WorkDocumentUploadSerializer(serializers.Serializer):
     document = serializers.FileField()
 
