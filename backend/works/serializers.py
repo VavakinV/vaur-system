@@ -136,3 +136,110 @@ class WorkDocumentUploadSerializer(serializers.Serializer):
         work.save(update_fields=['document', 'document_original_name'])
 
         return work
+
+
+class WorkTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkType
+        fields = ('id', 'name')
+
+
+class WorkRequestStudentSerializer(serializers.ModelSerializer):
+    type_name = serializers.CharField(source='type.name', read_only=True)
+    type_id = serializers.IntegerField(source='type.id', read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    teacher_id = serializers.IntegerField(source='teacher.id', read_only=True)
+    teacher_user_id = serializers.IntegerField(source='teacher.user.id', read_only=True)
+    teacher_department_id = serializers.IntegerField(source='teacher.department_id', read_only=True)
+
+    class Meta:
+        model = WorkRequest
+        fields = (
+            'id', 'topic',
+            'type_id', 'type_name',
+            'teacher_id', 'teacher_user_id', 'teacher_name', 'teacher_department_id',
+            'status', 'created_at',
+        )
+
+    def get_teacher_name(self, obj):
+        return str(obj.teacher.user)
+
+
+class WorkRequestTeacherSerializer(serializers.ModelSerializer):
+    type_name = serializers.CharField(source='type.name', read_only=True)
+    student_name = serializers.SerializerMethodField()
+    student_user_id = serializers.IntegerField(source='student.user.id', read_only=True)
+    student_group = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WorkRequest
+        fields = ('id', 'topic', 'type_name', 'student_user_id', 'student_name', 'student_group', 'status', 'created_at')
+
+    def get_student_name(self, obj):
+        return str(obj.student.user)
+
+    def get_student_group(self, obj):
+        return obj.student.group_number.number
+
+
+class WorkRequestDetailSerializer(serializers.ModelSerializer):
+    type_name = serializers.CharField(source='type.name', read_only=True)
+    student_name = serializers.SerializerMethodField()
+    student_user_id = serializers.IntegerField(source='student.user.id', read_only=True)
+    student_group = serializers.SerializerMethodField()
+    teacher_name = serializers.SerializerMethodField()
+    teacher_user_id = serializers.IntegerField(source='teacher.user.id', read_only=True)
+    teacher_department_name = serializers.CharField(source='teacher.department.name', read_only=True)
+
+    class Meta:
+        model = WorkRequest
+        fields = (
+            'id', 'topic', 'type_name',
+            'student_name', 'student_user_id', 'student_group',
+            'teacher_name', 'teacher_user_id', 'teacher_department_name',
+            'status', 'created_at',
+        )
+
+    def get_student_name(self, obj):
+        return str(obj.student.user)
+
+    def get_teacher_name(self, obj):
+        return str(obj.teacher.user)
+
+    def get_student_group(self, obj):
+        return obj.student.group_number.number
+
+
+class WorkRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('teacher', 'type', 'topic')
+
+    def create(self, validated_data):
+        student = self.context['student']
+        return WorkRequest.objects.create(student=student, **validated_data)
+
+
+class WorkRequestUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('status',)
+
+    def validate_status(self, value):
+        allowed = (WorkRequest.Status.ACCEPTED, WorkRequest.Status.REJECTED)
+        if value not in allowed:
+            raise serializers.ValidationError('Допустимые значения: accepted, rejected.')
+        return value
+
+
+class WorkRequestStudentUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('teacher', 'type', 'topic')
+
+    def validate(self, attrs):
+        if self.instance and self.instance.status != WorkRequest.Status.PENDING:
+            raise serializers.ValidationError(
+                'Можно изменять только заявки со статусом "В ожидании".'
+            )
+        return attrs

@@ -6,7 +6,7 @@
 
         <div class="navbar__center">
             <span class="nav-link" @click="$router.push('/works')">Мои работы</span>
-            <span class="nav-link" @click="$router.push('/')">Мои заявки</span>
+            <span class="nav-link" @click="$router.push('/applications')">Мои заявки</span>
         </div>
 
         <div class="navbar__right">
