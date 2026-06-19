@@ -31,6 +31,7 @@ from users.serializers import (
 )
 
 from users.models import Department, Teacher, User, Group
+from django.shortcuts import get_object_or_404
 
 AUTH_TAG = ['Auth']
 USERS_TAG = ['Users']
