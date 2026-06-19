@@ -14,18 +14,43 @@
         <h1 class="page-title">Мои заявки</h1>
         <custom-button v-if="!hasPendingRequest" class="btn-submit" @click="openModal">Подать заявку</custom-button>
       </div>
+
+      <div class="filters-bar">
+        <select class="filter-select" v-model="filters.type_name">
+          <option value="">Все типы работ</option>
+          <option v-for="t in uniqueTypes" :key="t" :value="t">{{ t }}</option>
+        </select>
+        <select class="filter-select" v-model="filters.person">
+          <option value="">Все руководители</option>
+          <option v-for="p in uniquePersons" :key="p" :value="p">{{ p }}</option>
+        </select>
+        <select class="filter-select" v-model="filters.status">
+          <option value="">Все статусы</option>
+          <option v-for="s in uniqueStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
+        </select>
+        <button v-if="hasActiveFilters" class="btn-reset" @click="resetFilters">✕ Сбросить</button>
+      </div>
+      <p v-if="hasActiveFilters" class="filter-count">Показано {{ displayedRequests.length }} из {{ requests.length }}</p>
+
       <div class="table-container">
-        <table class="requests-table">
+        <div v-if="displayedRequests.length === 0" class="empty-filtered">Нет заявок, соответствующих фильтрам.</div>
+        <table v-else class="requests-table">
           <thead>
             <tr>
               <th>Тема</th>
-              <th>Тип работы</th>
-              <th>Руководитель</th>
-              <th>Статус</th>
+              <th class="sortable" @click="toggleSort('type_name')">
+                <span class="th-inner">Тип работы <span :class="['sort-icon', { active: sort.key === 'type_name' }]">{{ sortIcon('type_name') }}</span></span>
+              </th>
+              <th class="sortable" @click="toggleSort('teacher_name')">
+                <span class="th-inner">Руководитель <span :class="['sort-icon', { active: sort.key === 'teacher_name' }]">{{ sortIcon('teacher_name') }}</span></span>
+              </th>
+              <th class="sortable" @click="toggleSort('status')">
+                <span class="th-inner">Статус <span :class="['sort-icon', { active: sort.key === 'status' }]">{{ sortIcon('status') }}</span></span>
+              </th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="req in sortedRequests" :key="req.id">
+            <tr v-for="req in displayedRequests" :key="req.id">
               <td data-label="Тема" class="topic-cell">
                 <router-link :to="{ name: 'applicationDetail', params: { id: req.id } }">{{ req.topic }}</router-link>
               </td>
@@ -59,47 +84,79 @@
     <template v-else-if="role === 'teacher' && !loading">
       <h1 class="page-title">Отправленные мне заявки</h1>
       <div v-if="requests.length === 0" class="empty-hint">Входящих заявок пока нет.</div>
-      <div v-else class="table-container">
-        <table class="requests-table">
-          <thead>
-            <tr>
-              <th>Тема</th>
-              <th>Тип работы</th>
-              <th>Студент</th>
-              <th>Группа</th>
-              <th>Статус</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="req in sortedRequests" :key="req.id">
-              <td data-label="Тема" class="topic-cell">
-                <router-link :to="{ name: 'applicationDetail', params: { id: req.id } }">{{ req.topic }}</router-link>
-              </td>
-              <td data-label="Тип работы">{{ req.type_name }}</td>
-              <td data-label="Студент">
-                <router-link :to="{ name: 'profile', params: { id: req.student_user_id } }">{{ req.student_name }}</router-link>
-              </td>
-              <td data-label="Группа">{{ req.student_group }}</td>
-              <td data-label="Статус">
-                <div class="status-cell">
-                  <span :class="['status-badge', req.status]">{{ statusLabel(req.status) }}</span>
-                  <button
-                    v-if="req.status === 'pending'"
-                    class="icon-btn"
-                    title="Изменить статус"
-                    @click="openStatusModal(req)"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+      <template v-else>
+        <div class="filters-bar">
+          <select class="filter-select" v-model="filters.type_name">
+            <option value="">Все типы работ</option>
+            <option v-for="t in uniqueTypes" :key="t" :value="t">{{ t }}</option>
+          </select>
+          <select class="filter-select" v-model="filters.person">
+            <option value="">Все студенты</option>
+            <option v-for="p in uniquePersons" :key="p" :value="p">{{ p }}</option>
+          </select>
+          <select class="filter-select" v-model="filters.student_group">
+            <option value="">Все группы</option>
+            <option v-for="g in uniqueGroups" :key="g" :value="g">{{ g }}</option>
+          </select>
+          <select class="filter-select" v-model="filters.status">
+            <option value="">Все статусы</option>
+            <option v-for="s in uniqueStatuses" :key="s" :value="s">{{ statusLabel(s) }}</option>
+          </select>
+          <button v-if="hasActiveFilters" class="btn-reset" @click="resetFilters">✕ Сбросить</button>
+        </div>
+        <p v-if="hasActiveFilters" class="filter-count">Показано {{ displayedRequests.length }} из {{ requests.length }}</p>
+
+        <div class="table-container">
+          <div v-if="displayedRequests.length === 0" class="empty-filtered">Нет заявок, соответствующих фильтрам.</div>
+          <table v-else class="requests-table">
+            <thead>
+              <tr>
+                <th>Тема</th>
+                <th class="sortable" @click="toggleSort('type_name')">
+                  <span class="th-inner">Тип работы <span :class="['sort-icon', { active: sort.key === 'type_name' }]">{{ sortIcon('type_name') }}</span></span>
+                </th>
+                <th class="sortable" @click="toggleSort('student_name')">
+                  <span class="th-inner">Студент <span :class="['sort-icon', { active: sort.key === 'student_name' }]">{{ sortIcon('student_name') }}</span></span>
+                </th>
+                <th class="sortable" @click="toggleSort('student_group')">
+                  <span class="th-inner">Группа <span :class="['sort-icon', { active: sort.key === 'student_group' }]">{{ sortIcon('student_group') }}</span></span>
+                </th>
+                <th class="sortable" @click="toggleSort('status')">
+                  <span class="th-inner">Статус <span :class="['sort-icon', { active: sort.key === 'status' }]">{{ sortIcon('status') }}</span></span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="req in displayedRequests" :key="req.id">
+                <td data-label="Тема" class="topic-cell">
+                  <router-link :to="{ name: 'applicationDetail', params: { id: req.id } }">{{ req.topic }}</router-link>
+                </td>
+                <td data-label="Тип работы">{{ req.type_name }}</td>
+                <td data-label="Студент">
+                  <router-link :to="{ name: 'profile', params: { id: req.student_user_id } }">{{ req.student_name }}</router-link>
+                </td>
+                <td data-label="Группа">{{ req.student_group }}</td>
+                <td data-label="Статус">
+                  <div class="status-cell">
+                    <span :class="['status-badge', req.status]">{{ statusLabel(req.status) }}</span>
+                    <button
+                      v-if="req.status === 'pending'"
+                      class="icon-btn"
+                      title="Изменить статус"
+                      @click="openStatusModal(req)"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </template>
     </template>
 
     <div v-else-if="loading" class="loading">Загрузка...</div>
@@ -185,6 +242,9 @@ export default {
       requests: [],
       loading: true,
 
+      sort: { key: null, dir: 'asc' },
+      filters: { type_name: '', person: '', student_group: '', status: '' },
+
       departments: [],
       availableTeachers: [],
       teachersLoading: false,
@@ -213,9 +273,50 @@ export default {
     hasPendingRequest() {
       return this.requests.some(r => r.status === 'pending');
     },
-    sortedRequests() {
-      const order = { pending: 0, accepted: 1, rejected: 2 };
-      return [...this.requests].sort((a, b) => order[a.status] - order[b.status]);
+
+    uniqueTypes() {
+      return [...new Set(this.requests.map(r => r.type_name).filter(Boolean))].sort();
+    },
+    uniquePersons() {
+      const key = this.role === 'teacher' ? 'student_name' : 'teacher_name';
+      return [...new Set(this.requests.map(r => r[key]).filter(Boolean))].sort();
+    },
+    uniqueGroups() {
+      return [...new Set(this.requests.map(r => r.student_group).filter(Boolean))].sort();
+    },
+    uniqueStatuses() {
+      return [...new Set(this.requests.map(r => r.status).filter(Boolean))];
+    },
+    hasActiveFilters() {
+      return Object.values(this.filters).some(v => v !== '');
+    },
+
+    displayedRequests() {
+      const STATUS_ORDER = { pending: 0, accepted: 1, rejected: 2 };
+      const personKey = this.role === 'teacher' ? 'student_name' : 'teacher_name';
+
+      let result = this.requests.filter(r => {
+        if (this.filters.type_name && r.type_name !== this.filters.type_name) return false;
+        if (this.filters.person && r[personKey] !== this.filters.person) return false;
+        if (this.filters.student_group && r.student_group !== this.filters.student_group) return false;
+        if (this.filters.status && r.status !== this.filters.status) return false;
+        return true;
+      });
+
+      if (this.sort.key) {
+        const key = this.sort.key;
+        const dir = this.sort.dir === 'asc' ? 1 : -1;
+        result = [...result].sort((a, b) => {
+          if (key === 'status') {
+            return dir * ((STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99));
+          }
+          return dir * String(a[key] || '').localeCompare(String(b[key] || ''), 'ru');
+        });
+      } else {
+        result = [...result].sort((a, b) => (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99));
+      }
+
+      return result;
     },
   },
 
@@ -238,6 +339,20 @@ export default {
     statusLabel(status) {
       const map = { pending: 'Ожидание', accepted: 'Одобрена', rejected: 'Отклонена' };
       return map[status] || status;
+    },
+    toggleSort(key) {
+      if (this.sort.key === key) {
+        this.sort.dir = this.sort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        this.sort = { key, dir: 'asc' };
+      }
+    },
+    sortIcon(key) {
+      if (this.sort.key !== key) return '⇅';
+      return this.sort.dir === 'asc' ? '▲' : '▼';
+    },
+    resetFilters() {
+      this.filters = { type_name: '', person: '', student_group: '', status: '' };
     },
 
     async openModal() {
@@ -393,6 +508,88 @@ export default {
 
 .btn-submit {
   min-width: 180px;
+}
+
+/* Filter bar */
+.filters-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+.filter-select {
+  flex: 1 1 150px;
+  max-width: 210px;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.filter-select:focus {
+  border-color: #6497b1;
+}
+
+.btn-reset {
+  padding: 8px 14px;
+  border: 1px solid #e0b87a;
+  border-radius: 6px;
+  background: #fff8e8;
+  color: #a05a00;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btn-reset:hover {
+  background: #ffeecf;
+}
+
+.filter-count {
+  font-size: 13px;
+  color: #888;
+  margin: 0 0 10px;
+}
+
+.empty-filtered {
+  padding: 24px 16px;
+  color: #888;
+  font-size: 15px;
+}
+
+/* Sortable headers */
+.sortable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable:hover {
+  background: #f0f4f7;
+}
+
+.th-inner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.sort-icon {
+  font-size: 11px;
+  color: #ccc;
+  transition: color 0.15s;
+}
+
+.sort-icon.active {
+  color: #6497b1;
 }
 
 /* Table */
@@ -670,6 +867,11 @@ export default {
     flex-direction: column;
     align-items: flex-start;
     gap: 12px;
+  }
+
+  .filter-select {
+    flex: 1 1 calc(50% - 5px);
+    max-width: none;
   }
 }
 </style>
