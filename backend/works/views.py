@@ -9,6 +9,7 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from users.models import User
 from works.models import Work, WorkRequest, WorkType
 from works.serializers import (
     WorkDetailSerializer,
@@ -199,6 +200,80 @@ class WorkRequestListCreateView(APIView):
             WorkRequestStudentSerializer(work_request).data,
             status=status.HTTP_201_CREATED,
         )
+
+
+class WorkRequestMyView(APIView):
+    def get(self, request):
+        user = request.user
+        if user.role == 'student':
+            requests = WorkRequest.objects.filter(student=user.student_profile).select_related(
+                'type', 'teacher__user',
+            )
+            return Response(WorkRequestStudentSerializer(requests, many=True).data)
+        if user.role == 'teacher':
+            requests = WorkRequest.objects.filter(teacher=user.teacher_profile).select_related(
+                'type', 'student__user', 'student__group_number',
+            )
+            return Response(WorkRequestTeacherSerializer(requests, many=True).data)
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+
+class WorkRequestAcceptView(APIView):
+    def post(self, request, pk):
+        user = request.user
+        if user.role != 'teacher':
+            return Response({'detail': 'Только преподаватели могут подтверждать заявки.'}, status=status.HTTP_403_FORBIDDEN)
+        work_request = get_object_or_404(
+            WorkRequest.objects.select_related('teacher__department', 'student', 'type'),
+            pk=pk, teacher=user.teacher_profile,
+        )
+        if work_request.status != WorkRequest.Status.PENDING:
+            return Response({'detail': 'Можно подтверждать только заявки со статусом "В ожидании".'}, status=status.HTTP_400_BAD_REQUEST)
+        work_request.status = WorkRequest.Status.ACCEPTED
+        work_request.save(update_fields=['status'])
+        Work.objects.create(
+            student=work_request.student,
+            supervisor=work_request.teacher,
+            department=work_request.teacher.department,
+            work_type=work_request.type,
+            topic=work_request.topic,
+        )
+        work_request = WorkRequest.objects.select_related(
+            'type', 'student__user', 'student__group_number',
+        ).get(pk=pk)
+        return Response(WorkRequestTeacherSerializer(work_request).data)
+
+
+class WorkRequestRejectView(APIView):
+    def post(self, request, pk):
+        user = request.user
+        if user.role != 'teacher':
+            return Response({'detail': 'Только преподаватели могут отклонять заявки.'}, status=status.HTTP_403_FORBIDDEN)
+        work_request = get_object_or_404(WorkRequest, pk=pk, teacher=user.teacher_profile)
+        if work_request.status != WorkRequest.Status.PENDING:
+            return Response({'detail': 'Можно отклонять только заявки со статусом "В ожидании".'}, status=status.HTTP_400_BAD_REQUEST)
+        work_request.status = WorkRequest.Status.REJECTED
+        work_request.save(update_fields=['status'])
+        work_request = WorkRequest.objects.select_related(
+            'type', 'student__user', 'student__group_number',
+        ).get(pk=pk)
+        return Response(WorkRequestTeacherSerializer(work_request).data)
+
+
+class WorkUserView(APIView):
+    def get(self, request, user_id):
+        target_user = get_object_or_404(User, pk=user_id)
+        qs = Work.objects.select_related(
+            'student__user', 'student__group_number',
+            'supervisor__user', 'department', 'work_type',
+        )
+        student_profile = getattr(target_user, 'student_profile', None)
+        if student_profile:
+            works = qs.filter(student=student_profile)
+        else:
+            teacher_profile = getattr(target_user, 'teacher_profile', None)
+            works = qs.filter(supervisor=teacher_profile) if teacher_profile else qs.none()
+        return Response(WorkShortSerializer(works, many=True).data)
 
 
 _REQUEST_DETAIL_SELECT = (
