@@ -1,5 +1,6 @@
 <template>
   <div class="works-view">
+    <div class="page-inner">
     <h1 class="page-title">{{ role === 'teacher' ? 'Работы под моим руководством' : 'Мои работы' }}</h1>
 
     <div v-if="loading" class="empty-hint">Загрузка...</div>
@@ -87,6 +88,7 @@
         </table>
       </div>
     </template>
+    </div>
   </div>
 </template>
 
@@ -208,8 +210,13 @@ export default {
 <style scoped>
 .works-view {
   min-height: calc(100vh - 80px);
-  padding: 40px 32px;
   background: #f3f6f4;
+}
+
+.page-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
 }
 
 .page-title {
@@ -365,7 +372,7 @@ export default {
 
 /* Mobile */
 @media (max-width: 768px) {
-  .works-view { padding: 20px 16px; }
+  .page-inner { padding: 20px 16px; }
 
   .filter-select {
     flex: 1 1 calc(50% - 5px);

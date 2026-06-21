@@ -1,5 +1,6 @@
 <template>
   <div class="applications-view">
+    <div class="page-inner">
 
     <!-- Student: empty state -->
     <template v-if="role === 'student' && !loading && requests.length === 0">
@@ -230,6 +231,7 @@
       </div>
     </div>
 
+    </div><!-- /page-inner -->
   </div>
 </template>
 
@@ -480,9 +482,14 @@ export default {
 <style scoped>
 .applications-view {
   min-height: 100vh;
-  padding: 32px;
   background: #f3f6f4;
   font-family: sans-serif;
+}
+
+.page-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 32px 20px;
 }
 
 .page-title {
@@ -814,6 +821,10 @@ export default {
 
 /* Responsive */
 @media screen and (max-width: 768px) {
+  .page-inner {
+    padding: 16px;
+  }
+
   .requests-table thead {
     display: none;
   }
