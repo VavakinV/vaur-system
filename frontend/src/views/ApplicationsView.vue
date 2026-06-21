@@ -461,7 +461,9 @@ export default {
       this.statusUpdating = true;
       this.statusError = '';
       try {
-        const updated = await applicationsApi.updateRequestStatus(this.selectedRequest.id, newStatus);
+        const updated = newStatus === 'accepted'
+          ? await applicationsApi.acceptRequest(this.selectedRequest.id)
+          : await applicationsApi.rejectRequest(this.selectedRequest.id);
         const idx = this.requests.findIndex(r => r.id === updated.id);
         if (idx !== -1) this.requests.splice(idx, 1, updated);
         this.closeStatusModal();

@@ -2,7 +2,7 @@ import { apiClient } from "@/api/client";
 
 export default {
     async getRequests() {
-        const response = await apiClient.get('/works/requests/');
+        const response = await apiClient.get('/works/requests/my/');
         return response.data;
     },
 
@@ -16,8 +16,13 @@ export default {
         return response.data;
     },
 
-    async updateRequestStatus(id, status) {
-        const response = await apiClient.patch(`/works/requests/${id}/`, { status });
+    async acceptRequest(id) {
+        const response = await apiClient.post(`/works/requests/${id}/accept/`);
+        return response.data;
+    },
+
+    async rejectRequest(id) {
+        const response = await apiClient.post(`/works/requests/${id}/reject/`);
         return response.data;
     },
 
