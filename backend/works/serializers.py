@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from django.utils import timezone
 from rest_framework import serializers
 
-from works.models import Work, WorkRequest, WorkType
+from works.models import Work, WorkCorrection, WorkRequest, WorkType
 
 
 class WorkShortSerializer(serializers.ModelSerializer):
@@ -40,6 +41,7 @@ class WorkDetailSerializer(WorkShortSerializer):
     department_id = serializers.IntegerField(read_only=True)
     work_type_id = serializers.IntegerField(read_only=True)
     document_original_name = serializers.CharField(read_only=True)
+    document_updated_at = serializers.DateTimeField(read_only=True)
     download_url = serializers.SerializerMethodField()
 
     class Meta(WorkShortSerializer.Meta):
@@ -51,6 +53,7 @@ class WorkDetailSerializer(WorkShortSerializer):
             'department_id',
             'work_type_id',
             'document_original_name',
+            'document_updated_at',
             'download_url',
         )
 
@@ -140,7 +143,8 @@ class WorkDocumentUploadSerializer(serializers.Serializer):
 
         work.document = document
         work.document_original_name = document.name
-        work.save(update_fields=['document', 'document_original_name'])
+        work.document_updated_at = timezone.now()
+        work.save(update_fields=['document', 'document_original_name', 'document_updated_at'])
 
         return work
 
@@ -250,3 +254,22 @@ class WorkRequestStudentUpdateSerializer(serializers.ModelSerializer):
                 'Можно изменять только заявки со статусом "В ожидании".'
             )
         return attrs
+
+
+class WorkCorrectionSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    author_user_id = serializers.IntegerField(source='author.user.id', read_only=True)
+
+    class Meta:
+        model = WorkCorrection
+        fields = ['id', 'author_name', 'author_user_id', 'author_role', 'items', 'is_resolved', 'created_at']
+
+    def get_author_name(self, obj):
+        return str(obj.author.user)
+
+
+class WorkCorrectionWriteSerializer(serializers.Serializer):
+    items = serializers.ListField(
+        child=serializers.CharField(allow_blank=False, trim_whitespace=True),
+        min_length=1,
+    )

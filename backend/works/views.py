@@ -10,8 +10,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from users.models import User
-from works.models import Work, WorkRequest, WorkType
+from works.models import Work, WorkCorrection, WorkRequest, WorkType
 from works.serializers import (
+    WorkCorrectionSerializer,
+    WorkCorrectionWriteSerializer,
     WorkDetailSerializer,
     WorkDocumentSerializer,
     WorkDocumentUploadSerializer,
@@ -330,3 +332,61 @@ class WorkRequestUpdateView(APIView):
             return Response(WorkRequestStudentSerializer(serializer.save()).data)
 
         return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+
+class WorkCorrectionListCreateView(APIView):
+    def get(self, request, pk):
+        work = get_accessible_work(pk, request.user, 'Access denied.')
+        corrections = (
+            WorkCorrection.objects
+            .filter(work=work)
+            .select_related('author__user')
+            .order_by('created_at')
+        )
+        return Response(WorkCorrectionSerializer(corrections, many=True).data)
+
+    def post(self, request, pk):
+        work = get_accessible_work(pk, request.user, 'Access denied.')
+        teacher = getattr(request.user, 'teacher_profile', None)
+        if not teacher:
+            return Response(
+                {'detail': 'Только преподаватели могут добавлять правки.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if work.supervisor_id == teacher.id:
+            author_role = WorkCorrection.AuthorRole.SUPERVISOR
+        elif teacher.is_norm_controller:
+            author_role = WorkCorrection.AuthorRole.NORM_CONTROLLER
+        else:
+            return Response(
+                {'detail': 'Вы не являетесь руководителем данной работы.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = WorkCorrectionWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        correction = WorkCorrection(
+            work=work,
+            author=teacher,
+            author_role=author_role,
+            items=serializer.validated_data['items'],
+        )
+        correction.save()
+        correction = WorkCorrection.objects.select_related('author__user').get(pk=correction.pk)
+        return Response(WorkCorrectionSerializer(correction).data, status=status.HTTP_201_CREATED)
+
+
+class WorkCorrectionUpdateView(APIView):
+    def patch(self, request, correction_id):
+        teacher = getattr(request.user, 'teacher_profile', None)
+        if not teacher:
+            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        correction = get_object_or_404(
+            WorkCorrection.objects.select_related('author__user', 'work'),
+            pk=correction_id,
+            author=teacher,
+        )
+        serializer = WorkCorrectionWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        correction.items = serializer.validated_data['items']
+        correction.save()
+        return Response(WorkCorrectionSerializer(correction).data)

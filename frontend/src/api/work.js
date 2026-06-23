@@ -20,6 +20,21 @@ export default {
         return response.data;
     },
 
+    async getCorrections(workId) {
+        const response = await apiClient.get(`/works/${workId}/corrections/`);
+        return response.data;
+    },
+
+    async createCorrection(workId, items) {
+        const response = await apiClient.post(`/works/${workId}/corrections/`, { items });
+        return response.data;
+    },
+
+    async updateCorrection(correctionId, items) {
+        const response = await apiClient.patch(`/works/corrections/${correctionId}/`, { items });
+        return response.data;
+    },
+
     async downloadDocument(id, filename) {
         const response = await apiClient.get(`/works/${id}/document/`, {
             responseType: 'blob',

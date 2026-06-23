@@ -79,6 +79,11 @@ class Work(models.Model):
         blank=True,
         verbose_name='Оригинальное имя файла',
     )
+    document_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата обновления файла',
+    )
     status = models.CharField(
         max_length=30,
         choices=Status.choices,
@@ -104,8 +109,10 @@ class Work(models.Model):
     def save(self, *args, **kwargs):
         if self.document and not self.document._committed:
             self.document_original_name = Path(self.document.name).name
+            self.document_updated_at = timezone.now()
         elif not self.document:
             self.document_original_name = ''
+            self.document_updated_at = None
 
         self.full_clean()
         return super().save(*args, **kwargs)
