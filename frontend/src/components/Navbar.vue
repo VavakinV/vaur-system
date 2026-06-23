@@ -1,12 +1,13 @@
 <template>
     <nav class="navbar">
+        <div class="navbar__inner">
         <div class="navbar__left">
               <h1 class="logo" @click="$router.push('/')">Система ВАУР</h1>
         </div>
 
         <div class="navbar__center">
             <span class="nav-link" @click="$router.push('/works')">Мои работы</span>
-            <span class="nav-link" @click="$router.push('/')">Мои заявки</span>
+            <span class="nav-link" @click="$router.push('/applications')">Мои заявки</span>
         </div>
 
         <div class="navbar__right">
@@ -22,6 +23,7 @@
                 Выйти
             </custom-button>
         </div>
+        </div><!-- /navbar__inner -->
     </nav>
 </template>
 
@@ -56,16 +58,22 @@ export default {
 
 <style scoped>
 .navbar {
-  height: 80px; 
+  height: 80px;
   background-color: #6497b1;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  justify-content: space-between; 
-  padding: 0 40px;
   position: sticky;
   top: 0;
   z-index: 1000;
+}
+
+.navbar__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .navbar__left, .navbar__right {
@@ -168,9 +176,12 @@ export default {
 @media (max-width: 768px) {
   .navbar {
     height: auto;
+  }
+  .navbar__inner {
     flex-direction: column;
     padding: 15px;
     gap: 15px;
+    height: auto;
   }
   .navbar__left, .navbar__center, .navbar__right {
     flex: none;

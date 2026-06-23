@@ -79,6 +79,11 @@ class Work(models.Model):
         blank=True,
         verbose_name='Оригинальное имя файла',
     )
+    document_updated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата обновления файла',
+    )
     status = models.CharField(
         max_length=30,
         choices=Status.choices,
@@ -104,8 +109,10 @@ class Work(models.Model):
     def save(self, *args, **kwargs):
         if self.document and not self.document._committed:
             self.document_original_name = Path(self.document.name).name
+            self.document_updated_at = timezone.now()
         elif not self.document:
             self.document_original_name = ''
+            self.document_updated_at = None
 
         self.full_clean()
         return super().save(*args, **kwargs)
@@ -192,15 +199,27 @@ class WorkCorrection(models.Model):
 
 
 class WorkRequest(models.Model):
-    class WorkRequestStatus:
-        PENDING = 'pending', 'В ожидании' 
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'В ожидании'
         REJECTED = 'rejected', 'Отклонено'
-        ACCEPTED = 'accepted', 'Подтверждено'
+        ACCEPTED = 'accepted', 'Одобрена'
 
-    student = models.ForeignKey(Student, on_delete=models.CASCADE, verbose_name='Студент')
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, verbose_name='Преподаватель')
+    student = models.ForeignKey(
+        Student, on_delete=models.CASCADE,
+        related_name='work_requests', verbose_name='Студент',
+    )
+    teacher = models.ForeignKey(
+        Teacher, on_delete=models.CASCADE,
+        related_name='received_requests', verbose_name='Преподаватель',
+    )
     type = models.ForeignKey(WorkType, on_delete=models.CASCADE, verbose_name='Тип работы')
     topic = models.CharField(max_length=150, verbose_name='Тема работы')
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        verbose_name='Статус заявки',
+    )
     created_at = models.DateField(auto_now_add=True, verbose_name='Дата создания')
 
     class Meta:

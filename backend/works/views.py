@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from django.http import FileResponse
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import status
 from rest_framework.exceptions import NotFound, PermissionDenied
@@ -8,13 +9,24 @@ from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from works.models import Work
+from users.models import User
+from works.models import Work, WorkCorrection, WorkRequest, WorkType
 from works.serializers import (
+    WorkCorrectionSerializer,
+    WorkCorrectionWriteSerializer,
     WorkDetailSerializer,
     WorkDocumentSerializer,
     WorkDocumentUploadSerializer,
+    WorkRequestCreateSerializer,
+    WorkRequestDetailSerializer,
+    WorkRequestStudentSerializer,
+    WorkRequestStudentUpdateSerializer,
+    WorkRequestTeacherSerializer,
+    WorkRequestUpdateSerializer,
     WorkShortSerializer,
+    WorkTypeSerializer,
 )
+
 
 
 WORKS_TAG = ['Works']
@@ -42,6 +54,7 @@ def get_accessible_work(pk, user, denied_message):
     try:
         work = Work.objects.select_related(
             'student__user',
+            'student__group_number',
             'supervisor__user',
             'department',
             'work_type',
@@ -136,3 +149,244 @@ class WorkDocumentView(WorkBaseView):
         response = FileResponse(work.document.open('rb'), as_attachment=True, filename=filename)
         response['Content-Type'] = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
         return response
+
+
+class WorkListView(APIView):
+    def get(self, request):
+        user = request.user
+        qs = Work.objects.select_related(
+            'student__user', 'student__group_number',
+            'supervisor__user', 'department', 'work_type',
+        )
+        if user.role == 'student':
+            works = qs.filter(student=user.student_profile)
+        elif user.role == 'teacher':
+            works = qs.filter(supervisor=user.teacher_profile)
+        else:
+            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        return Response(WorkShortSerializer(works, many=True).data)
+
+
+class WorkTypeListView(APIView):
+    def get(self, request):
+        types = WorkType.objects.all()
+        return Response(WorkTypeSerializer(types, many=True).data)
+
+
+class WorkRequestListCreateView(APIView):
+    def get(self, request):
+        user = request.user
+        if user.role == 'student':
+            student = user.student_profile
+            requests = WorkRequest.objects.filter(student=student).select_related(
+                'type', 'teacher__user',
+            )
+            return Response(WorkRequestStudentSerializer(requests, many=True).data)
+        if user.role == 'teacher':
+            teacher = user.teacher_profile
+            requests = WorkRequest.objects.filter(teacher=teacher).select_related(
+                'type', 'student__user', 'student__group_number',
+            )
+            return Response(WorkRequestTeacherSerializer(requests, many=True).data)
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+    def post(self, request):
+        user = request.user
+        if user.role != 'student':
+            return Response({'detail': 'Только студенты могут подавать заявки.'}, status=status.HTTP_403_FORBIDDEN)
+        student = user.student_profile
+        serializer = WorkRequestCreateSerializer(data=request.data, context={'student': student})
+        serializer.is_valid(raise_exception=True)
+        work_request = serializer.save()
+        return Response(
+            WorkRequestStudentSerializer(work_request).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class WorkRequestMyView(APIView):
+    def get(self, request):
+        user = request.user
+        if user.role == 'student':
+            requests = WorkRequest.objects.filter(student=user.student_profile).select_related(
+                'type', 'teacher__user',
+            )
+            return Response(WorkRequestStudentSerializer(requests, many=True).data)
+        if user.role == 'teacher':
+            requests = WorkRequest.objects.filter(teacher=user.teacher_profile).select_related(
+                'type', 'student__user', 'student__group_number',
+            )
+            return Response(WorkRequestTeacherSerializer(requests, many=True).data)
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+
+class WorkRequestAcceptView(APIView):
+    def post(self, request, pk):
+        user = request.user
+        if user.role != 'teacher':
+            return Response({'detail': 'Только преподаватели могут подтверждать заявки.'}, status=status.HTTP_403_FORBIDDEN)
+        work_request = get_object_or_404(
+            WorkRequest.objects.select_related('teacher__department', 'student', 'type'),
+            pk=pk, teacher=user.teacher_profile,
+        )
+        if work_request.status != WorkRequest.Status.PENDING:
+            return Response({'detail': 'Можно подтверждать только заявки со статусом "В ожидании".'}, status=status.HTTP_400_BAD_REQUEST)
+        work_request.status = WorkRequest.Status.ACCEPTED
+        work_request.save(update_fields=['status'])
+        Work.objects.create(
+            student=work_request.student,
+            supervisor=work_request.teacher,
+            department=work_request.teacher.department,
+            work_type=work_request.type,
+            topic=work_request.topic,
+        )
+        work_request = WorkRequest.objects.select_related(
+            'type', 'student__user', 'student__group_number',
+        ).get(pk=pk)
+        return Response(WorkRequestTeacherSerializer(work_request).data)
+
+
+class WorkRequestRejectView(APIView):
+    def post(self, request, pk):
+        user = request.user
+        if user.role != 'teacher':
+            return Response({'detail': 'Только преподаватели могут отклонять заявки.'}, status=status.HTTP_403_FORBIDDEN)
+        work_request = get_object_or_404(WorkRequest, pk=pk, teacher=user.teacher_profile)
+        if work_request.status != WorkRequest.Status.PENDING:
+            return Response({'detail': 'Можно отклонять только заявки со статусом "В ожидании".'}, status=status.HTTP_400_BAD_REQUEST)
+        work_request.status = WorkRequest.Status.REJECTED
+        work_request.save(update_fields=['status'])
+        work_request = WorkRequest.objects.select_related(
+            'type', 'student__user', 'student__group_number',
+        ).get(pk=pk)
+        return Response(WorkRequestTeacherSerializer(work_request).data)
+
+
+class WorkUserView(APIView):
+    def get(self, request, user_id):
+        target_user = get_object_or_404(User, pk=user_id)
+        qs = Work.objects.select_related(
+            'student__user', 'student__group_number',
+            'supervisor__user', 'department', 'work_type',
+        )
+        student_profile = getattr(target_user, 'student_profile', None)
+        if student_profile:
+            works = qs.filter(student=student_profile)
+        else:
+            teacher_profile = getattr(target_user, 'teacher_profile', None)
+            works = qs.filter(supervisor=teacher_profile) if teacher_profile else qs.none()
+        return Response(WorkShortSerializer(works, many=True).data)
+
+
+_REQUEST_DETAIL_SELECT = (
+    'type', 'teacher__user', 'teacher__department',
+    'student__user', 'student__group_number',
+)
+
+
+class WorkRequestUpdateView(APIView):
+    def get(self, request, pk):
+        user = request.user
+        student = getattr(user, 'student_profile', None)
+        teacher = getattr(user, 'teacher_profile', None)
+        try:
+            if student:
+                work_request = WorkRequest.objects.select_related(
+                    *_REQUEST_DETAIL_SELECT
+                ).get(pk=pk, student=student)
+            elif teacher:
+                work_request = WorkRequest.objects.select_related(
+                    *_REQUEST_DETAIL_SELECT
+                ).get(pk=pk, teacher=teacher)
+            else:
+                return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        except WorkRequest.DoesNotExist:
+            return Response({'detail': 'Заявка не найдена.'}, status=status.HTTP_404_NOT_FOUND)
+        return Response(WorkRequestDetailSerializer(work_request).data)
+
+    def patch(self, request, pk):
+        user = request.user
+
+        if user.role == 'teacher':
+            teacher = user.teacher_profile
+            try:
+                work_request = WorkRequest.objects.select_related(
+                    'type', 'student__user', 'student__group_number',
+                ).get(pk=pk, teacher=teacher)
+            except WorkRequest.DoesNotExist:
+                return Response({'detail': 'Заявка не найдена.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = WorkRequestUpdateSerializer(work_request, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            return Response(WorkRequestTeacherSerializer(serializer.save()).data)
+
+        if user.role == 'student':
+            student = user.student_profile
+            try:
+                work_request = WorkRequest.objects.select_related(
+                    'type', 'teacher__user',
+                ).get(pk=pk, student=student)
+            except WorkRequest.DoesNotExist:
+                return Response({'detail': 'Заявка не найдена.'}, status=status.HTTP_404_NOT_FOUND)
+            serializer = WorkRequestStudentUpdateSerializer(work_request, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            return Response(WorkRequestStudentSerializer(serializer.save()).data)
+
+        return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
+
+class WorkCorrectionListCreateView(APIView):
+    def get(self, request, pk):
+        work = get_accessible_work(pk, request.user, 'Access denied.')
+        corrections = (
+            WorkCorrection.objects
+            .filter(work=work)
+            .select_related('author__user')
+            .order_by('created_at')
+        )
+        return Response(WorkCorrectionSerializer(corrections, many=True).data)
+
+    def post(self, request, pk):
+        work = get_accessible_work(pk, request.user, 'Access denied.')
+        teacher = getattr(request.user, 'teacher_profile', None)
+        if not teacher:
+            return Response(
+                {'detail': 'Только преподаватели могут добавлять правки.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if work.supervisor_id == teacher.id:
+            author_role = WorkCorrection.AuthorRole.SUPERVISOR
+        elif teacher.is_norm_controller:
+            author_role = WorkCorrection.AuthorRole.NORM_CONTROLLER
+        else:
+            return Response(
+                {'detail': 'Вы не являетесь руководителем данной работы.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = WorkCorrectionWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        correction = WorkCorrection(
+            work=work,
+            author=teacher,
+            author_role=author_role,
+            items=serializer.validated_data['items'],
+        )
+        correction.save()
+        correction = WorkCorrection.objects.select_related('author__user').get(pk=correction.pk)
+        return Response(WorkCorrectionSerializer(correction).data, status=status.HTTP_201_CREATED)
+
+
+class WorkCorrectionUpdateView(APIView):
+    def patch(self, request, correction_id):
+        teacher = getattr(request.user, 'teacher_profile', None)
+        if not teacher:
+            return Response({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+        correction = get_object_or_404(
+            WorkCorrection.objects.select_related('author__user', 'work'),
+            pk=correction_id,
+            author=teacher,
+        )
+        serializer = WorkCorrectionWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        correction.items = serializer.validated_data['items']
+        correction.save()
+        return Response(WorkCorrectionSerializer(correction).data)

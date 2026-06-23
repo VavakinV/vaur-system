@@ -11,6 +11,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from users.serializers import (
     AccessTokenSerializer,
     AuthTokensSerializer,
+    DepartmentSerializer,
     EmailOrUsernameTokenObtainPairSerializer,
     GroupSerializer,
     LoginSerializer,
@@ -23,15 +24,14 @@ from users.serializers import (
     StudentDetailSerializer,
     StudentMeSerializer,
     StudentSerializer,
+    TeacherAvailableSerializer,
     TeacherDetailSerializer,
     TeacherMeSerializer,
     TeacherSerializer,
 )
 
+from users.models import Department, Teacher, User, Group
 from django.shortcuts import get_object_or_404
-
-from users.models import User, Group
-
 
 AUTH_TAG = ['Auth']
 USERS_TAG = ['Users']
@@ -196,7 +196,7 @@ class UserDetailView(APIView):
         },
     )
     def get(self, request, pk):
-        user = get_object_or_404(User, pk=pk)
+        user = User.objects.select_related('student_profile', 'teacher_profile').get(pk=pk)
         profile = user.student_profile if user.role == User.Role.STUDENT else user.teacher_profile
         serializer = USER_DETAIL_SERIALIZERS[user.role](profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -244,3 +244,32 @@ class GroupView(APIView):
         groups = Group.objects.all()
         serializer = GroupSerializer(groups, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class DepartmentListView(APIView):
+    def get(self, request):
+        departments = Department.objects.all()
+        return Response(DepartmentSerializer(departments, many=True).data)
+
+
+class TeachersByDepartmentView(APIView):
+    def get(self, request, pk):
+        from django.db.models import Count, F, Q
+
+        try:
+            department = Department.objects.get(pk=pk)
+        except Department.DoesNotExist:
+            return Response({'detail': 'Кафедра не найдена.'}, status=status.HTTP_404_NOT_FOUND)
+
+        teachers = (
+            Teacher.objects.filter(department=department)
+            .select_related('user')
+            .annotate(
+                active_students=(
+                    Count('supervised_works', distinct=True)
+                    + Count('received_requests', filter=Q(received_requests__status='accepted'), distinct=True)
+                )
+            )
+            .filter(Q(student_limit__isnull=True) | Q(active_students__lt=F('student_limit')))
+        )
+        return Response(TeacherAvailableSerializer(teachers, many=True).data)

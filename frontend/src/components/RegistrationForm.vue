@@ -117,7 +117,7 @@
 </template>
 
 <script>
-import { apiClient } from "@/api/auth"
+import { apiClient } from "@/api/client"
 
 export default {
     name: "RegistrationForm",

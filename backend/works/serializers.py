@@ -1,8 +1,9 @@
 from pathlib import Path
 
+from django.utils import timezone
 from rest_framework import serializers
 
-from works.models import Work
+from works.models import Work, WorkCorrection, WorkRequest, WorkType
 
 
 class WorkShortSerializer(serializers.ModelSerializer):
@@ -10,6 +11,7 @@ class WorkShortSerializer(serializers.ModelSerializer):
     supervisor_full_name = serializers.CharField(source='supervisor.user', read_only=True)
     department_name = serializers.CharField(source='department.name', read_only=True)
     work_type_name = serializers.CharField(source='work_type.name', read_only=True)
+    student_group = serializers.CharField(source='student.group_number.number', read_only=True)
     has_document = serializers.SerializerMethodField()
 
     class Meta:
@@ -21,6 +23,8 @@ class WorkShortSerializer(serializers.ModelSerializer):
             'supervisor_full_name',
             'department_name',
             'work_type_name',
+            'student_group',
+            'status',
             'norm_control_status',
             'has_document',
         )
@@ -31,19 +35,25 @@ class WorkShortSerializer(serializers.ModelSerializer):
 
 class WorkDetailSerializer(WorkShortSerializer):
     student_id = serializers.IntegerField(read_only=True)
+    student_user_id = serializers.IntegerField(source='student.user.id', read_only=True)
     supervisor_id = serializers.IntegerField(read_only=True)
+    supervisor_user_id = serializers.IntegerField(source='supervisor.user.id', read_only=True)
     department_id = serializers.IntegerField(read_only=True)
     work_type_id = serializers.IntegerField(read_only=True)
     document_original_name = serializers.CharField(read_only=True)
+    document_updated_at = serializers.DateTimeField(read_only=True)
     download_url = serializers.SerializerMethodField()
 
     class Meta(WorkShortSerializer.Meta):
         fields = WorkShortSerializer.Meta.fields + (
             'student_id',
+            'student_user_id',
             'supervisor_id',
+            'supervisor_user_id',
             'department_id',
             'work_type_id',
             'document_original_name',
+            'document_updated_at',
             'download_url',
         )
 
@@ -86,6 +96,36 @@ class WorkDocumentSerializer(serializers.ModelSerializer):
         return request.build_absolute_uri(f'/works/{obj.pk}/document/')
 
 
+class WorkTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkType
+        fields = ('id', 'name')
+
+
+class WorkRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('teacher', 'type', 'topic')
+
+
+class WorkRequestSerializer(serializers.ModelSerializer):
+    teacher_full_name = serializers.CharField(source='teacher.user', read_only=True)
+    work_type_name = serializers.CharField(source='type.name', read_only=True)
+
+    class Meta:
+        model = WorkRequest
+        fields = (
+            'id',
+            'teacher_id',
+            'teacher_full_name',
+            'type_id',
+            'work_type_name',
+            'topic',
+            'status',
+            'created_at',
+        )
+
+
 class WorkDocumentUploadSerializer(serializers.Serializer):
     document = serializers.FileField()
 
@@ -103,6 +143,133 @@ class WorkDocumentUploadSerializer(serializers.Serializer):
 
         work.document = document
         work.document_original_name = document.name
-        work.save(update_fields=['document', 'document_original_name'])
+        work.document_updated_at = timezone.now()
+        work.save(update_fields=['document', 'document_original_name', 'document_updated_at'])
 
         return work
+
+
+class WorkTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkType
+        fields = ('id', 'name')
+
+
+class WorkRequestStudentSerializer(serializers.ModelSerializer):
+    type_name = serializers.CharField(source='type.name', read_only=True)
+    type_id = serializers.IntegerField(source='type.id', read_only=True)
+    teacher_name = serializers.SerializerMethodField()
+    teacher_id = serializers.IntegerField(source='teacher.id', read_only=True)
+    teacher_user_id = serializers.IntegerField(source='teacher.user.id', read_only=True)
+    teacher_department_id = serializers.IntegerField(source='teacher.department_id', read_only=True)
+
+    class Meta:
+        model = WorkRequest
+        fields = (
+            'id', 'topic',
+            'type_id', 'type_name',
+            'teacher_id', 'teacher_user_id', 'teacher_name', 'teacher_department_id',
+            'status', 'created_at',
+        )
+
+    def get_teacher_name(self, obj):
+        return str(obj.teacher.user)
+
+
+class WorkRequestTeacherSerializer(serializers.ModelSerializer):
+    type_name = serializers.CharField(source='type.name', read_only=True)
+    student_name = serializers.SerializerMethodField()
+    student_user_id = serializers.IntegerField(source='student.user.id', read_only=True)
+    student_group = serializers.SerializerMethodField()
+
+    class Meta:
+        model = WorkRequest
+        fields = ('id', 'topic', 'type_name', 'student_user_id', 'student_name', 'student_group', 'status', 'created_at')
+
+    def get_student_name(self, obj):
+        return str(obj.student.user)
+
+    def get_student_group(self, obj):
+        return obj.student.group_number.number
+
+
+class WorkRequestDetailSerializer(serializers.ModelSerializer):
+    type_name = serializers.CharField(source='type.name', read_only=True)
+    student_name = serializers.SerializerMethodField()
+    student_user_id = serializers.IntegerField(source='student.user.id', read_only=True)
+    student_group = serializers.SerializerMethodField()
+    teacher_name = serializers.SerializerMethodField()
+    teacher_user_id = serializers.IntegerField(source='teacher.user.id', read_only=True)
+    teacher_department_name = serializers.CharField(source='teacher.department.name', read_only=True)
+
+    class Meta:
+        model = WorkRequest
+        fields = (
+            'id', 'topic', 'type_name',
+            'student_name', 'student_user_id', 'student_group',
+            'teacher_name', 'teacher_user_id', 'teacher_department_name',
+            'status', 'created_at',
+        )
+
+    def get_student_name(self, obj):
+        return str(obj.student.user)
+
+    def get_teacher_name(self, obj):
+        return str(obj.teacher.user)
+
+    def get_student_group(self, obj):
+        return obj.student.group_number.number
+
+
+class WorkRequestCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('teacher', 'type', 'topic')
+
+    def create(self, validated_data):
+        student = self.context['student']
+        return WorkRequest.objects.create(student=student, **validated_data)
+
+
+class WorkRequestUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('status',)
+
+    def validate_status(self, value):
+        allowed = (WorkRequest.Status.ACCEPTED, WorkRequest.Status.REJECTED)
+        if value not in allowed:
+            raise serializers.ValidationError('Допустимые значения: accepted, rejected.')
+        return value
+
+
+class WorkRequestStudentUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = WorkRequest
+        fields = ('teacher', 'type', 'topic')
+
+    def validate(self, attrs):
+        if self.instance and self.instance.status != WorkRequest.Status.PENDING:
+            raise serializers.ValidationError(
+                'Можно изменять только заявки со статусом "В ожидании".'
+            )
+        return attrs
+
+
+class WorkCorrectionSerializer(serializers.ModelSerializer):
+    author_name = serializers.SerializerMethodField()
+    author_user_id = serializers.IntegerField(source='author.user.id', read_only=True)
+
+    class Meta:
+        model = WorkCorrection
+        fields = ['id', 'author_name', 'author_user_id', 'author_role', 'items', 'is_resolved', 'created_at']
+
+    def get_author_name(self, obj):
+        return str(obj.author.user)
+
+
+class WorkCorrectionWriteSerializer(serializers.Serializer):
+    items = serializers.ListField(
+        child=serializers.CharField(allow_blank=False, trim_whitespace=True),
+        min_length=1,
+    )
