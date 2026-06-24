@@ -98,6 +98,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'vaur.urls'
 
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
