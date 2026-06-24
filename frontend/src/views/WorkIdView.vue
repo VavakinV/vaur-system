@@ -33,7 +33,28 @@
 
         <div class="info-item">
           <label>СТАТУС РАБОТЫ</label>
-          <span :class="['status-work', work.status]">{{ translateStatus(work.status) }}</span>
+          <div class="status-row">
+            <span :class="['status-work', work.status]">{{ translateStatus(work.status) }}</span>
+            <button
+              v-if="isSupervisor && !editingStatus"
+              class="btn-edit-status"
+              @click="startEditStatus"
+            >
+              Изменить
+            </button>
+          </div>
+          <div v-if="isSupervisor && editingStatus" class="status-edit-form">
+            <select v-model="newStatus" class="status-select">
+              <option v-for="s in statusOptions" :key="s.value" :value="s.value">{{ s.label }}</option>
+            </select>
+            <div class="status-edit-actions">
+              <custom-button size="small" @click="saveStatus" :disabled="savingStatus">
+                {{ savingStatus ? 'Сохранение...' : 'Сохранить' }}
+              </custom-button>
+              <button class="btn-cancel-edit" @click="cancelEditStatus">Отмена</button>
+            </div>
+            <p v-if="statusError" class="correction-error">{{ statusError }}</p>
+          </div>
         </div>
 
         <div class="info-item">
@@ -44,7 +65,6 @@
 
       <hr class="section-divider" />
 
-      <!-- File section -->
       <div class="file-section">
         <div class="info-item">
           <label>ФАЙЛ РАБОТЫ</label>
@@ -72,7 +92,6 @@
 
       <hr class="section-divider" />
 
-      <!-- Corrections section -->
       <div class="corrections-section">
         <h2 class="section-label">ПРАВКИ</h2>
 
@@ -121,7 +140,6 @@
             </div>
           </div>
 
-          <!-- Add correction form: teacher/supervisor only -->
           <div v-if="isSupervisor" class="add-correction-form">
             <h3 class="add-correction-title">Добавить правку</h3>
             <textarea
@@ -181,6 +199,10 @@ export default {
       editText: '',
       editError: '',
       editSaving: false,
+      editingStatus: false,
+      newStatus: null,
+      savingStatus: false,
+      statusError: '',
     };
   },
 
@@ -197,6 +219,9 @@ export default {
         this.work !== null &&
         this.currentUserId === this.work.supervisor_user_id
       );
+    },
+    statusOptions() {
+      return Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }));
     },
   },
 
@@ -304,6 +329,33 @@ export default {
       });
     },
 
+    startEditStatus() {
+      this.newStatus = this.work.status;
+      this.editingStatus = true;
+      this.statusError = '';
+    },
+
+    cancelEditStatus() {
+      this.editingStatus = false;
+      this.newStatus = null;
+      this.statusError = '';
+    },
+
+    async saveStatus() {
+      if (this.savingStatus || !this.newStatus) return;
+      this.savingStatus = true;
+      this.statusError = '';
+      try {
+        const result = await workApi.updateStatus(this.id, this.newStatus);
+        this.work = { ...this.work, status: result.status };
+        this.cancelEditStatus();
+      } catch (e) {
+        this.statusError = e.response?.data?.detail || 'Ошибка при обновлении статуса';
+      } finally {
+        this.savingStatus = false;
+      }
+    },
+
     translateStatus(s) {
       return STATUS_LABELS[s] || s;
     },
@@ -408,6 +460,57 @@ export default {
   margin: 28px 0;
 }
 
+.status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-edit-status {
+  background: none;
+  border: 1px solid #6497b1;
+  border-radius: 4px;
+  color: #6497b1;
+  font-size: 12px;
+  padding: 2px 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.btn-edit-status:hover {
+  background: #e8f0f5;
+}
+
+.status-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.status-select {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  background: white;
+  color: #333;
+  outline: none;
+  max-width: 280px;
+  cursor: pointer;
+}
+
+.status-select:focus {
+  border-color: #6497b1;
+}
+
+.status-edit-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .file-section {
   display: flex;
   flex-direction: column;
@@ -443,7 +546,7 @@ export default {
   font-style: italic;
 }
 
-/* Corrections */
+
 .corrections-section {
   display: flex;
   flex-direction: column;

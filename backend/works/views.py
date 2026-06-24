@@ -15,6 +15,7 @@ from works.serializers import (
     WorkCorrectionSerializer,
     WorkCorrectionWriteSerializer,
     WorkDetailSerializer,
+    WorkStatusUpdateSerializer,
     WorkDocumentSerializer,
     WorkDocumentUploadSerializer,
     WorkRequestCreateSerializer,
@@ -125,7 +126,7 @@ class WorkDocumentView(WorkBaseView):
     )
     def post(self, request, pk):
         work = self.get_work(pk, request.user)
-        serializer = WorkDocumentUploadSerializer(data=request.data, context={'work': work})
+        serializer = WorkDocumentUploadSerializer(data=request.data, context={'work': work, 'user': request.user})
         serializer.is_valid(raise_exception=True)
         work = serializer.save()
         response_serializer = WorkDocumentSerializer(work, context={'request': request})
@@ -392,3 +393,21 @@ class WorkCorrectionUpdateView(APIView):
         correction.items = serializer.validated_data['items']
         correction.save()
         return Response(WorkCorrectionSerializer(correction).data)
+
+
+class WorkStatusUpdateView(WorkBaseView):
+    access_denied_message = 'You have no access to this work.'
+
+    def patch(self, request, pk):
+        work = self.get_work(pk, request.user)
+        teacher = getattr(request.user, 'teacher_profile', None)
+        if not teacher or work.supervisor_id != teacher.id:
+            return Response(
+                {'detail': 'Только руководитель работы может изменять её статус.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        serializer = WorkStatusUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        work.status = serializer.validated_data['status']
+        work.save(update_fields=['status'])
+        return Response({'status': work.status})

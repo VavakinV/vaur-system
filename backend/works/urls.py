@@ -12,6 +12,7 @@ from works.views import (
     WorkRequestRejectView,
     WorkRequestUpdateView,
     WorkShortView,
+    WorkStatusUpdateView,
     WorkTypeListView,
     WorkUserView,
 )
@@ -31,4 +32,5 @@ urlpatterns = [
     path('<int:pk>/detail/', WorkDetailView.as_view(), name='work-detail'),
     path('<int:pk>/document/', WorkDocumentView.as_view(), name='work-document'),
     path('<int:pk>/corrections/', WorkCorrectionListCreateView.as_view(), name='work-corrections'),
+    path('<int:pk>/status/', WorkStatusUpdateView.as_view(), name='work-status-update'),
 ]
