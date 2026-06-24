@@ -23,7 +23,7 @@
                 Выйти
             </custom-button>
         </div>
-        </div><!-- /navbar__inner -->
+        </div>
     </nav>
 </template>
 
