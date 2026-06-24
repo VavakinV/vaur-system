@@ -117,7 +117,7 @@
 </template>
 
 <script>
-import { apiClient } from "@/api/client"
+import groupsApi from "@/api/groups"
 
 export default {
     name: "RegistrationForm",
@@ -167,8 +167,7 @@ export default {
     methods: {
         async fetchGroups() {
             try {
-                const response = await apiClient.get("/groups/")
-                this.groups = response.data
+                this.groups = await groupsApi.getGroups();
             } catch (error) {
                 console.error("Не удалось загрузить список групп:", error)
             }
