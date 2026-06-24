@@ -509,7 +509,6 @@ export default {
 .applications-view {
   min-height: 100vh;
   background: #f3f6f4;
-  font-family: sans-serif;
 }
 
 .page-inner {

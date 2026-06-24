@@ -228,6 +228,12 @@ export default {
   methods: {
     async fetchWorkData() {
       this.loading = true;
+      this.editingStatus = false;
+      this.newStatus = null;
+      this.statusError = '';
+      this.editingCorrectionId = null;
+      this.editText = '';
+      this.editError = '';
       try {
         this.work = await workApi.getWorkById(this.id);
         await this.fetchCorrections();
@@ -257,6 +263,8 @@ export default {
         await this.fetchWorkData();
       } catch (e) {
         alert('Ошибка при загрузке файла');
+      } finally {
+        event.target.value = '';
       }
     },
 

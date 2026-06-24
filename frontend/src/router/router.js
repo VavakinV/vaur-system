@@ -48,10 +48,6 @@ const routes = [
         meta: {
             requiresAuth: true,
             roles: ["admin", "student", "teacher"]
-        },
-        meta: {
-            requiresAuth: true,
-            roles: ["admin", "student", "teacher"]
         }
     },
     {
