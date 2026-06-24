@@ -58,7 +58,11 @@ const routes = [
         path: '/work/:id',
         name: 'workDetail',
         component: Work,
-        props: true
+        props: true,
+        meta: {
+            requiresAuth: true,
+            roles: ["admin", "student", "teacher"]
+        }
     },
     {
         path: '/applications',
@@ -66,7 +70,7 @@ const routes = [
         component: Applications,
         meta: {
             requiresAuth: true,
-            roles: ["student", "teacher"]
+            roles: ["admin", "student", "teacher"]
         }
     },
     {
@@ -76,7 +80,7 @@ const routes = [
         props: true,
         meta: {
             requiresAuth: true,
-            roles: ["student", "teacher"]
+            roles: ["admin", "student", "teacher"]
         }
     },
     {

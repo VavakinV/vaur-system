@@ -136,6 +136,7 @@ class WorkDocumentUploadSerializer(serializers.Serializer):
 
     def save(self, **kwargs):
         work = self.context['work']
+        user = self.context.get('user')
         document = self.validated_data['document']
 
         if work.document:
@@ -144,8 +145,17 @@ class WorkDocumentUploadSerializer(serializers.Serializer):
         work.document = document
         work.document_original_name = document.name
         work.document_updated_at = timezone.now()
-        work.save(update_fields=['document', 'document_original_name', 'document_updated_at'])
+        update_fields = ['document', 'document_original_name', 'document_updated_at']
 
+        if user is not None:
+            if user.role == 'student':
+                work.status = Work.Status.STUDENT_EDIT
+                update_fields.append('status')
+            elif user.role == 'teacher':
+                work.status = Work.Status.SUPERVISOR_EDIT
+                update_fields.append('status')
+
+        work.save(update_fields=update_fields)
         return work
 
 
@@ -273,3 +283,7 @@ class WorkCorrectionWriteSerializer(serializers.Serializer):
         child=serializers.CharField(allow_blank=False, trim_whitespace=True),
         min_length=1,
     )
+
+
+class WorkStatusUpdateSerializer(serializers.Serializer):
+    status = serializers.ChoiceField(choices=Work.Status.choices)
