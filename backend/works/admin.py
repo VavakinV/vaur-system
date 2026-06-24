@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from works.models import Work, WorkCorrection, WorkType
+from works.models import Work, WorkCorrection, WorkType, WorkRequest
 
 
 @admin.register(WorkType)
@@ -35,3 +35,9 @@ class WorkCorrectionAdmin(admin.ModelAdmin):
         'author__user__first_name',
         'author__user__email',
     )
+
+@admin.register(WorkRequest)
+class WorkRequestAdmin(admin.ModelAdmin):
+    list_display = ('student', 'teacher', 'type', 'status', 'created_at')
+    readonly_fields = ('created_at',)
+    
