@@ -233,7 +233,7 @@ class WorkRequestAcceptView(APIView):
             return Response({'detail': 'Можно подтверждать только заявки со статусом "В ожидании".'}, status=status.HTTP_400_BAD_REQUEST)
         work_request.status = WorkRequest.Status.ACCEPTED
         work_request.save(update_fields=['status'])
-        Work.objects.create(
+        created_work = Work.objects.create(
             student=work_request.student,
             supervisor=work_request.teacher,
             department=work_request.teacher.department,
@@ -243,7 +243,9 @@ class WorkRequestAcceptView(APIView):
         work_request = WorkRequest.objects.select_related(
             'type', 'student__user', 'student__group_number',
         ).get(pk=pk)
-        return Response(WorkRequestTeacherSerializer(work_request).data)
+        data = WorkRequestTeacherSerializer(work_request).data
+        data['created_work_id'] = created_work.id
+        return Response(data)
 
 
 class WorkRequestRejectView(APIView):

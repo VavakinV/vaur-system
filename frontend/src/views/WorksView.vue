@@ -7,7 +7,6 @@
     <div v-else-if="works.length === 0" class="empty-hint">Работ пока нет.</div>
 
     <template v-else>
-      <!-- Filter bar -->
       <div class="filters-bar">
         <select class="filter-select" v-model="filters.work_type_name" title="Тип работы">
           <option value="">Все типы работ</option>
@@ -36,7 +35,6 @@
         Показано {{ displayedWorks.length }} из {{ works.length }}
       </p>
 
-      <!-- Table -->
       <div class="table-container">
         <div v-if="displayedWorks.length === 0" class="empty-filtered">
           Нет работ, соответствующих фильтрам.
@@ -225,7 +223,6 @@ export default {
   margin: 0 0 20px;
 }
 
-/* Filter bar */
 .filters-bar {
   display: flex;
   flex-wrap: wrap;
@@ -276,7 +273,6 @@ export default {
   margin: 0 0 10px;
 }
 
-/* Table */
 .table-container {
   background: white;
   border-radius: 8px;
@@ -370,7 +366,6 @@ export default {
   padding: 24px;
 }
 
-/* Mobile */
 @media (max-width: 768px) {
   .page-inner { padding: 20px 16px; }
 

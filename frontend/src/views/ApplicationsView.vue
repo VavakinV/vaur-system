@@ -9,7 +9,6 @@
       <custom-button class="btn-submit" @click="openModal">Подать заявку</custom-button>
     </template>
 
-    <!-- Student: list -->
     <template v-else-if="role === 'student' && !loading">
       <div class="page-header">
         <h1 class="page-title">Мои заявки</h1>
@@ -81,7 +80,6 @@
       </div>
     </template>
 
-    <!-- Teacher: list -->
     <template v-else-if="role === 'teacher' && !loading">
       <h1 class="page-title">Отправленные мне заявки</h1>
       <div v-if="requests.length === 0" class="empty-hint">Входящих заявок пока нет.</div>
@@ -162,7 +160,6 @@
 
     <div v-else-if="loading" class="loading">Загрузка...</div>
 
-    <!-- Modal: submit new request (student) -->
     <div v-if="showSubmitModal" class="modal-backdrop" @click.self="closeModal">
       <div class="modal">
         <h2 class="modal-title">{{ editingRequest ? 'Изменить заявку' : 'Подать заявку' }}</h2>
@@ -213,25 +210,49 @@
       </div>
     </div>
 
-    <!-- Modal: change status (teacher) -->
     <div v-if="showStatusModal" class="modal-backdrop" @click.self="closeStatusModal">
       <div class="modal modal--narrow">
-        <h2 class="modal-title">Изменить статус заявки</h2>
-        <p class="modal-desc">Тема: <strong>{{ selectedRequest?.topic }}</strong></p>
-        <p v-if="statusError" class="error-text">{{ statusError }}</p>
-        <div class="modal-actions modal-actions--status">
-          <custom-button class="btn-reject btn-status-action" @click="changeStatus('rejected')" :disabled="statusUpdating">
-            Отклонить
-          </custom-button>
-          <custom-button class="btn-status-action" @click="changeStatus('accepted')" :disabled="statusUpdating">
-            Одобрить
-          </custom-button>
-          <button class="btn-cancel btn-status-cancel" @click="closeStatusModal">Отмена</button>
-        </div>
+
+        <!-- Success state after accepting -->
+        <template v-if="createdWorkId">
+          <div class="modal-success">
+            <svg class="success-icon" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="26" cy="26" r="25" stroke="#4caf50" stroke-width="2"/>
+              <path d="M14 26l8 8 16-16" stroke="#4caf50" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p class="success-title">Заявка одобрена</p>
+            <p class="success-desc">Создана работа «{{ selectedRequest?.topic }}»</p>
+            <router-link
+              :to="{ name: 'workDetail', params: { id: createdWorkId } }"
+              class="btn-go-work"
+              @click="closeStatusModal"
+            >
+              Перейти к работе →
+            </router-link>
+            <button class="btn-cancel btn-status-cancel" @click="closeStatusModal">Закрыть</button>
+          </div>
+        </template>
+
+        <!-- Normal state -->
+        <template v-else>
+          <h2 class="modal-title">Изменить статус заявки</h2>
+          <p class="modal-desc">Тема: <strong>{{ selectedRequest?.topic }}</strong></p>
+          <p v-if="statusError" class="error-text">{{ statusError }}</p>
+          <div class="modal-actions modal-actions--status">
+            <custom-button class="btn-reject btn-status-action" @click="changeStatus('rejected')" :disabled="statusUpdating">
+              Отклонить
+            </custom-button>
+            <custom-button class="btn-status-action" @click="changeStatus('accepted')" :disabled="statusUpdating">
+              Одобрить
+            </custom-button>
+            <button class="btn-cancel btn-status-cancel" @click="closeStatusModal">Отмена</button>
+          </div>
+        </template>
+
       </div>
     </div>
 
-    </div><!-- /page-inner -->
+    </div>
   </div>
 </template>
 
@@ -262,6 +283,7 @@ export default {
       selectedRequest: null,
       statusUpdating: false,
       statusError: '',
+      createdWorkId: null,
     };
   },
 
@@ -410,7 +432,6 @@ export default {
           applicationsApi.getWorkTypes(),
         ]);
         await this.loadTeachersForDepartment(req.teacher_department_id);
-        // Ensure current teacher is selectable even if now at capacity
         if (!this.availableTeachers.some(t => t.id === req.teacher_id)) {
           this.availableTeachers.unshift({ id: req.teacher_id, full_name: req.teacher_name });
         }
@@ -456,6 +477,7 @@ export default {
     closeStatusModal() {
       this.showStatusModal = false;
       this.selectedRequest = null;
+      this.createdWorkId = null;
     },
 
     async changeStatus(newStatus) {
@@ -468,7 +490,11 @@ export default {
           : await applicationsApi.rejectRequest(this.selectedRequest.id);
         const idx = this.requests.findIndex(r => r.id === updated.id);
         if (idx !== -1) this.requests.splice(idx, 1, updated);
-        this.closeStatusModal();
+        if (newStatus === 'accepted' && updated.created_work_id) {
+          this.createdWorkId = updated.created_work_id;
+        } else {
+          this.closeStatusModal();
+        }
       } catch (e) {
         this.statusError = e.response?.data?.detail || 'Ошибка при обновлении статуса.';
       } finally {
@@ -519,7 +545,6 @@ export default {
   min-width: 180px;
 }
 
-/* Filter bar */
 .filters-bar {
   display: flex;
   flex-wrap: wrap;
@@ -574,7 +599,6 @@ export default {
   font-size: 15px;
 }
 
-/* Sortable headers */
 .sortable {
   cursor: pointer;
   user-select: none;
@@ -601,7 +625,6 @@ export default {
   color: #6497b1;
 }
 
-/* Table */
 .table-container {
   background: white;
   border-radius: 8px;
@@ -637,7 +660,6 @@ export default {
   gap: 8px;
 }
 
-/* Status badges */
 .status-badge {
   padding: 4px 12px;
   border-radius: 20px;
@@ -660,7 +682,6 @@ export default {
   color: #c62828;
 }
 
-/* Icon button */
 .icon-btn {
   background: none;
   border: none;
@@ -676,7 +697,6 @@ export default {
   color: #005b96;
 }
 
-/* Modal */
 .modal-backdrop {
   position: fixed;
   inset: 0;
@@ -819,7 +839,6 @@ export default {
   padding: 32px 0;
 }
 
-/* Responsive */
 @media screen and (max-width: 768px) {
   .page-inner {
     padding: 16px;
@@ -886,5 +905,50 @@ export default {
     flex: 1 1 calc(50% - 5px);
     max-width: none;
   }
+}
+
+/* Modal success state */
+.modal-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.success-icon {
+  width: 52px;
+  height: 52px;
+}
+
+.success-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #2e7d32;
+  margin: 0;
+}
+
+.success-desc {
+  font-size: 14px;
+  color: #555;
+  margin: 0;
+}
+
+.btn-go-work {
+  display: inline-block;
+  background: #6497b1;
+  color: white;
+  text-decoration: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+  margin-top: 4px;
+}
+
+.btn-go-work:hover {
+  background: #4a7a96;
 }
 </style>
