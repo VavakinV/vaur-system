@@ -35,6 +35,11 @@ export default {
         return response.data;
     },
 
+    async updateStatus(workId, status) {
+        const response = await apiClient.patch(`/works/${workId}/status/`, { status });
+        return response.data;
+    },
+
     async downloadDocument(id, filename) {
         const response = await apiClient.get(`/works/${id}/document/`, {
             responseType: 'blob',
